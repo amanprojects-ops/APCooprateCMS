@@ -1,0 +1,5 @@
+@extends('errors.layout')
+
+@section('title', __('Page Expired'))
+@section('code', '419')
+@section('message', __('Your session has expired due to inactivity. Please refresh the page and try logging in or submitting the form again.'))
