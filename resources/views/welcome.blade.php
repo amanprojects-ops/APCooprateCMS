@@ -1,1148 +1,808 @@
-@extends('layouts.frontend')
+<!doctype html>
+<html lang="en" translate="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ $settings['site_name'] ?? 'AmanOS' }} — Windows 7 Web OS</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+  <meta name="description" content="{{ $seo['description'] ?? 'AmanOS browser desktop environment' }}" />
+  <link rel="stylesheet" href="{{ asset('amanos/css/os.css') }}" />
+  <link rel="stylesheet" href="{{ asset('amanos/css/desktop.css') }}" />
+</head>
+<body>
 
-{{-- ============================================================
-     HOMEPAGE — welcome.blade.php
-     Dynamic: ALL data from DB via WelcomeController
-     SEO:     Full meta + JSON-LD from layouts/frontend.blade.php
-     Rules:   DO NOT change class names / CSS / AOS / Swiper attrs
-     ============================================================ --}}
+<!-- ===== BOOT SCREEN ===== -->
+<div id="boot-screen" class="boot-screen" aria-live="polite">
+  <div class="boot-logo">
+    <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" class="boot-win-logo">
+      <path d="M4 12 L38 7 L38 38 L4 38 Z"  fill="#F25022"/>
+      <path d="M42 6 L76 1 L76 38 L42 38 Z" fill="#7FBA00"/>
+      <path d="M4 42 L38 42 L38 73 L4 68 Z" fill="#00A4EF"/>
+      <path d="M42 42 L76 42 L76 79 L42 74 Z" fill="#FFB900"/>
+    </svg>
+    <div class="boot-os-name">{{ $settings['site_name'] ?? 'AmanOS' }}</div>
+  </div>
+  <div class="boot-spinner">
+    <div class="boot-dot"></div>
+    <div class="boot-dot"></div>
+    <div class="boot-dot"></div>
+    <div class="boot-dot"></div>
+    <div class="boot-dot"></div>
+  </div>
+</div>
 
-@section('content')
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="login-screen" class="login-screen hidden" aria-label="Login">
+  <div class="login-bg"></div>
 
-    {{-- ====================================================
-         HERO SECTION
-         - h1 / subtext from settings table
-         - Hero Swiper carousel from products (with screenshots)
-         ==================================================== --}}
-    <section id="home" class="hero section-padding" aria-label="AmanProjects hero — Software Solutions from Bihar"
-        itemscope itemtype="https://schema.org/WebSite">
+  <div class="login-clock-area">
+    <div id="login-time" class="login-time">00:00</div>
+    <div id="login-date" class="login-date">Monday, January 1</div>
+  </div>
 
-        {{-- AIO sr-only trigger (map.md Part 2.5) --}}
-        <p class="sr-only">
-            AmanProjects offers: Laravel web development, custom SaaS application development,
-            ethical hacking and penetration testing, REST API development, from Bihar, India.
-        </p>
+  <div id="login-user-select" class="login-panel">
+    <h2 class="login-heading">Sign in to {{ $settings['site_name'] ?? 'AmanOS' }}</h2>
+    <div class="login-user-cards">
 
-        <div class="container hero-grid">
-            <div class="hero-content" data-aos="fade-right">
-                <span class="badge">🔒 Security-First Software from Bihar, India</span>
-
-                <h1 class="hero-title" itemprop="name">
-                    {!! $settings['hero_headline'] ??
-                        'AmanProjects — Custom <span class="text-primary">Laravel SaaS</span> Development &amp; Ethical Hacking Services from Bihar, India' !!}
-                </h1>
-                <p class="hero-subtitle" itemprop="description">
-                    {{ $settings['hero_subtext'] ?? 'We build secure, scalable Laravel 12 SaaS products, corporate websites, and provide ethical hacking & penetration testing services for startups and businesses across India. Based in Bihar — enterprise-grade software at startup costs.' }}
-                </p>
-
-                <div class="hero-btns">
-                    <a href="{{ route('services') }}" class="btn btn-primary" id="hero-cta-services">
-                        Explore Services <i class="fas fa-arrow-right" aria-hidden="true"></i>
-                    </a>
-                    <a href="#how-it-works" class="btn btn-outline" id="hero-cta-how">How It Works</a>
-                </div>
-
-                {{-- Stats bar — from DB --}}
-                @if ($stats->isNotEmpty())
-                    <div class="hero-stats" aria-label="AmanProjects statistics">
-                        @foreach ($stats as $stat)
-                            <div class="stat-item" data-aos="fade-up" data-aos-delay="{{ 400 + $loop->index * 80 }}">
-                                @if ($stat->icon)
-                                    <span class="stat-icon" aria-hidden="true">{!! $stat->icon !!}</span>
-                                @endif
-                                <span class="stat-number counter" data-target="{{ $stat->value }}">0</span>{{ $stat->suffix }}
-                                <span class="stat-label">{{ $stat->label }}</span>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    {{-- Fallback static stats --}}
-                    <div class="hero-stats" aria-label="AmanProjects key statistics">
-                        <div class="stat-item" data-aos="fade-up" data-aos-delay="400">
-                            <span class="stat-icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                            </span>
-                            <span class="stat-number counter" data-target="3">0</span>+
-                            <span class="stat-label">Years Experience</span>
-                        </div>
-                        <div class="stat-item" data-aos="fade-up" data-aos-delay="480">
-                            <span class="stat-icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
-                            </span>
-                            <span class="stat-number counter" data-target="50">0</span>+
-                            <span class="stat-label">Projects Delivered</span>
-                        </div>
-                        <div class="stat-item" data-aos="fade-up" data-aos-delay="560">
-                            <span class="stat-icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /></svg>
-                            </span>
-                            <span class="stat-number counter" data-target="10">0</span>+
-                            <span class="stat-label">Security Audits</span>
-                        </div>
-                    </div>
-                @endif
-            </div>
-
-            {{-- Hero Carousel — products with screenshots --}}
-            <div class="hero-image" data-aos="fade-left">
-                @if ($products->isNotEmpty())
-                    <div class="swiper hero-swiper">
-                        <div class="swiper-wrapper">
-                            @foreach ($products as $product)
-                                <div class="swiper-slide">
-                                    @if ($product->screenshots->isNotEmpty())
-                                        <img src="{{ asset('storage/' . $product->screenshots->first()->image_path) }}"
-                                            alt="{{ $product->name }} — SaaS product by AmanProjects Bihar" loading="lazy"
-                                            decoding="async" width="600" height="400">
-                                    @elseif($product->thumbnail)
-                                        <img src="{{ asset('storage/' . $product->thumbnail) }}"
-                                            alt="{{ $product->name }} — SaaS product by AmanProjects Bihar" loading="lazy"
-                                            decoding="async" width="600" height="400">
-                                    @else
-                                        <div class="glass-card"
-                                            style="display:flex;align-items:center;justify-content:center;min-height:300px;">
-                                            <span class="stat-number">{{ $product->name }}</span>
-                                        </div>
-                                    @endif
-                                    <div class="slide-info">
-                                        <h3>{{ $product->name }}</h3>
-                                        <p>{{ $product->tagline }}</p>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                        <div class="swiper-button-prev" aria-label="Previous product"></div>
-                        <div class="swiper-button-next" aria-label="Next product"></div>
-                        <div class="swiper-pagination"></div>
-                    </div>
-                @else
-                    <div class="glass-card">
-                        <img src="{{ asset('assets/img/hero-banner.jpg') }}"
-                            alt="AmanProjects — Laravel SaaS & Ethical Hacking Services from Bihar India" loading="eager"
-                            fetchpriority="high" width="600" height="400">
-                        <div class="floating-badge badge-top" aria-hidden="true">
-                            <i class="fas fa-shield-alt"></i> Security-First Dev
-                        </div>
-                        <div class="floating-badge badge-bottom" aria-hidden="true">
-                            <i class="fas fa-check-circle"></i> Laravel 12 Expert
-                        </div>
-                    </div>
-                @endif
-            </div>
+      <button class="login-user-card" id="card-aman" onclick="selectUser('aman')" aria-label="Login as Aman">
+        <div class="luc-avatar">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="av1" cx="40%" cy="30%" r="65%">
+                <stop offset="0%" stop-color="#fde8c8"/>
+                <stop offset="100%" stop-color="#d4956a"/>
+              </radialGradient>
+              <linearGradient id="av2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#5ab4f0"/>
+                <stop offset="100%" stop-color="#1565c0"/>
+              </linearGradient>
+            </defs>
+            <ellipse cx="32" cy="56" rx="22" ry="12" fill="url(#av2)"/>
+            <ellipse cx="32" cy="48" rx="17" ry="10" fill="url(#av2)"/>
+            <rect x="27" y="33" width="10" height="9" rx="4" fill="url(#av1)"/>
+            <circle cx="32" cy="27" r="14" fill="url(#av1)"/>
+            <ellipse cx="32" cy="15" rx="14" ry="7" fill="#5a3010"/>
+            <ellipse cx="19" cy="22" rx="5" ry="9" fill="#5a3010"/>
+            <ellipse cx="45" cy="22" rx="5" ry="9" fill="#5a3010"/>
+            <ellipse cx="27" cy="27" rx="2.2" ry="2.5" fill="#3a2010"/>
+            <ellipse cx="37" cy="27" rx="2.2" ry="2.5" fill="#3a2010"/>
+            <circle cx="28" cy="26" r="0.8" fill="#fff"/>
+            <circle cx="38" cy="26" r="0.8" fill="#fff"/>
+            <path d="M27 31 Q32 35 37 31" stroke="#b07050" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
         </div>
-    </section>
+        <div class="luc-name">Aman</div>
+        <div class="luc-hint">Password protected</div>
+      </button>
 
-
-    {{-- ====================================================
-         FEATURES SECTION
-         - Static highlights (always visible)
-         ==================================================== --}}
-    <section id="features" class="features section-padding" aria-label="Why Choose AmanProjects — Key Features">
-        <div class="container">
-            <div class="section-header text-center" data-aos="fade-up">
-                <h2 class="section-title">{{ $settings['features_title'] ?? 'Why Choose AmanProjects?' }}</h2>
-                <p class="section-subtitle">
-                    {{ $settings['features_subtitle'] ?? 'Security-first software development for modern Indian businesses.' }}
-                </p>
-            </div>
-            <div class="features-grid">
-                @foreach ($features as $feature)
-                    <article class="feature-card" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}"
-                        aria-label="{{ $feature->title }} feature">
-                        <div class="feature-icon">{!! $feature->icon !!}</div>
-                        <h3>{{ $feature->title }}</h3>
-                        <p>{{ $feature->description }}</p>
-                    </article>
-                @endforeach
-            </div>
+      <button class="login-user-card" id="card-guest" onclick="selectUser('guest')" aria-label="Login as Guest">
+        <div class="luc-avatar luc-avatar--guest">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+            <circle cx="32" cy="24" r="12" fill="rgba(255,255,255,0.5)"/>
+            <ellipse cx="32" cy="52" rx="19" ry="12" fill="rgba(255,255,255,0.4)"/>
+          </svg>
         </div>
-    </section>
+        <div class="luc-name">Guest</div>
+        <div class="luc-hint">No password needed</div>
+      </button>
 
+    </div>
+  </div>
 
-    {{-- ====================================================
-         SERVICES SECTION (DB-driven)
-         - is_active = true only
-         - ordered by sort_order
-         ==================================================== --}}
-    @if ($services->isNotEmpty())
-        <section id="services" class="services section-padding bg-light" aria-label="Our Software Development Services">
+  <div id="login-password-panel" class="login-panel hidden">
+    <div class="lpanel-avatar">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="32" cy="56" rx="22" ry="12" fill="url(#av2)"/>
+        <ellipse cx="32" cy="48" rx="17" ry="10" fill="url(#av2)"/>
+        <rect x="27" y="33" width="10" height="9" rx="4" fill="url(#av1)"/>
+        <circle cx="32" cy="27" r="14" fill="url(#av1)"/>
+        <ellipse cx="32" cy="15" rx="14" ry="7" fill="#5a3010"/>
+        <ellipse cx="19" cy="22" rx="5" ry="9" fill="#5a3010"/>
+        <ellipse cx="45" cy="22" rx="5" ry="9" fill="#5a3010"/>
+        <ellipse cx="27" cy="27" rx="2.2" ry="2.5" fill="#3a2010"/>
+        <ellipse cx="37" cy="27" rx="2.2" ry="2.5" fill="#3a2010"/>
+        <circle cx="28" cy="26" r="0.8" fill="#fff"/>
+        <circle cx="38" cy="26" r="0.8" fill="#fff"/>
+        <path d="M27 31 Q32 35 37 31" stroke="#b07050" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="lpanel-name">Aman</div>
 
-            {{-- AIO sr-only trigger (map.md Part 2.5) --}}
-            <p class="sr-only">
-                AmanProjects offers the following software development services in Bihar, India:
-                Laravel web development, custom SaaS application development,
-                ethical hacking and penetration testing, REST API development and integration,
-                and custom software consulting for businesses across India.
-            </p>
+    <div class="lpanel-password-row">
+      {{-- Hidden email field — populated from DB admin email so doLogin() AJAX knows which email to use --}}
+      <input type="hidden" id="login-email-input" value="{{ $adminEmail ?? 'admin@amanprojects.com' }}" />
+      <input
+        type="password"
+        id="login-password-input"
+        class="lpanel-input"
+        placeholder="Password"
+        aria-label="Password"
+        onkeydown="handlePasswordKey(event)"
+        autocomplete="current-password"
+      />
+      <button class="lpanel-submit" id="login-submit-btn" onclick="doLogin()" aria-label="Sign in" title="Sign in">
+        <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 8 L13 8 M9 4 L13 8 L9 12" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
 
-            <div class="container">
-                <div class="section-header text-center" data-aos="fade-up">
-                    <h2 class="section-title">{{ $settings['services_title'] ?? 'What We Do' }}</h2>
-                    <p class="section-subtitle">
-                        {{ $settings['services_subtitle'] ?? 'Comprehensive software solutions for Indian startups and SMBs.' }}
-                    </p>
-                </div>
-                <div class="services-grid">
-                    @foreach ($services as $service)
-                        <article class="service-card" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}"
-                            itemscope itemtype="https://schema.org/Service"
-                            aria-label="{{ $service->title }} — AmanProjects service">
-                            <div class="service-icon">
-                                @if ($service->icon)
-                                    {!! $service->icon !!}
-                                @else
-                                    <i class="fas fa-code" aria-hidden="true"></i>
-                                @endif
-                            </div>
-                            <div class="service-content">
-                                <h3 itemprop="name">{{ $service->title }}</h3>
-                                <p itemprop="description">{{ $service->short_description }}</p>
-                                <a href="#contact" class="btn-text" aria-label="Learn more about {{ $service->title }}">
-                                    Learn More <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                                </a>
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
+    <div id="login-error" class="lpanel-error hidden">Incorrect password. Try again.</div>
 
+    <button class="lpanel-back" onclick="backToUserSelect()" aria-label="Back to user selection">
+      ← Back
+    </button>
+  </div>
 
-    {{-- ====================================================
-         PRODUCTS SHOWCASE (DB-driven)
-         - is_active = true, featured first
-         - each card has tech_stack tags, price, demo/buy CTAs
-         ==================================================== --}}
-    @if ($products->isNotEmpty())
-        <section id="products" class="section-padding" aria-label="SaaS Products by AmanProjects">
+  <div id="login-welcome" class="login-welcome hidden">
+    <div class="lwelcome-avatar">
+      <svg id="lwelcome-avatar-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div id="lwelcome-name" class="lwelcome-name">Welcome</div>
+    <div class="boot-spinner lwelcome-spinner">
+      <div class="boot-dot"></div>
+      <div class="boot-dot"></div>
+      <div class="boot-dot"></div>
+      <div class="boot-dot"></div>
+      <div class="boot-dot"></div>
+    </div>
+  </div>
 
-            {{-- AIO sr-only trigger (map.md Part 2.5) --}}
-            <p class="sr-only">
-                AmanProjects SaaS products include: AP Coaching (coaching centre management software for Bihar),
-                AP Library (library seat booking SaaS for Tier-2 cities), and more products under active development.
-            </p>
+</div>
 
-            <div class="container">
-                <div class="section-header text-center" data-aos="fade-up">
-                    <h2 class="section-title">{{ $settings['products_title'] ?? 'Our SaaS Products' }}</h2>
-                    <p class="section-subtitle">
-                        {{ $settings['products_subtitle'] ?? 'Purpose-built software for Indian education and service sectors.' }}
-                    </p>
-                </div>
-                <div class="services-grid">
-                    @foreach ($products as $product)
-                        <article class="product-card service-card {{ $product->is_featured ? 'featured-card' : '' }}"
-                            data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}" itemscope
-                            itemtype="https://schema.org/SoftwareApplication"
-                            aria-label="{{ $product->name }} — SaaS product by AmanProjects">
+<!-- ===== DESKTOP ===== -->
+<div id="desktop" class="desktop">
 
-                            @if ($product->is_featured)
-                                <span class="featured-badge">⭐ Featured</span>
-                            @endif
+  <!-- Desktop Icons -->
+  <div class="desktop-icons-area">
 
-                            @if ($product->screenshots->isNotEmpty())
-                                <div class="service-image swiper card-swiper">
-                                    <div class="swiper-wrapper">
-                                        @if ($product->thumbnail)
-                                            <div class="swiper-slide">
-                                                <img src="{{ asset('storage/' . $product->thumbnail) }}"
-                                                    alt="{{ $product->name }} — {{ $product->category ?? 'SaaS' }} by AmanProjects"
-                                                    title="{{ $product->name }}" loading="lazy" decoding="async" width="800"
-                                                    height="450" itemprop="image" style="width:100%;height:100%;object-fit:cover;">
-                                            </div>
-                                        @endif
-                                        @foreach ($product->screenshots as $shot)
-                                            <div class="swiper-slide">
-                                                <img src="{{ asset('storage/' . $shot->image_path) }}"
-                                                    alt="{{ $shot->caption ?? $product->name }}" loading="lazy" decoding="async" width="800"
-                                                    height="450" style="width:100%;height:100%;object-fit:cover;">
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    <div class="swiper-button-prev"></div>
-                                    <div class="swiper-button-next"></div>
-                                    <div class="swiper-pagination"></div>
-                                </div>
-                            @elseif ($product->thumbnail)
-                                <div class="service-image">
-                                    <img src="{{ asset('storage/' . $product->thumbnail) }}"
-                                        alt="{{ $product->name }} — {{ $product->category ?? 'SaaS' }} by AmanProjects"
-                                        title="{{ $product->name }}" loading="lazy" decoding="async" width="800"
-                                        height="450" itemprop="image">
-                                </div>
-                            @endif
+    <!-- About Us -->
+    <div class="desktop-icon" data-window="win-about" tabindex="0" aria-label="About Us">
+      <div class="di-img">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="ug2" cx="40%" cy="25%" r="65%">
+              <stop offset="0%" stop-color="#fde8c8"/>
+              <stop offset="100%" stop-color="#d4956a"/>
+            </radialGradient>
+            <linearGradient id="ug3" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#5ab4f0"/>
+              <stop offset="100%" stop-color="#1565c0"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="24" cy="42" rx="17" ry="10" fill="url(#ug3)"/>
+          <ellipse cx="24" cy="36" rx="13" ry="8" fill="url(#ug3)"/>
+          <rect x="20" y="25" width="8" height="7" rx="3" fill="url(#ug2)"/>
+          <circle cx="24" cy="20" r="11" fill="url(#ug2)"/>
+          <ellipse cx="24" cy="11" rx="11" ry="5" fill="#5a3010"/>
+          <ellipse cx="14" cy="17" rx="4" ry="7" fill="#5a3010"/>
+          <ellipse cx="34" cy="17" rx="4" ry="7" fill="#5a3010"/>
+          <ellipse cx="20" cy="20" rx="1.8" ry="2" fill="#3a2010"/>
+          <ellipse cx="28" cy="20" rx="1.8" ry="2" fill="#3a2010"/>
+          <path d="M20 24 Q24 27 28 24" stroke="#b07050" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="label">About Us</div>
+    </div>
 
-                            <div class="service-content">
-                                @if ($product->category)
-                                    <span class="category-badge">{{ $product->category }}</span>
-                                @endif
+    <!-- Services -->
+    <div class="desktop-icon" data-window="win-services" tabindex="0" aria-label="Services">
+      <div class="di-img">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="mon1" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#8ec8f0"/>
+              <stop offset="100%" stop-color="#1a6aad"/>
+            </linearGradient>
+            <linearGradient id="mon2" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#e8f4ff"/>
+              <stop offset="100%" stop-color="#5aa8e8"/>
+            </linearGradient>
+          </defs>
+          <rect x="4" y="4" width="40" height="30" rx="3" fill="url(#mon1)"/>
+          <rect x="6" y="6" width="36" height="26" rx="2" fill="#1a4878"/>
+          <rect x="8" y="8" width="32" height="22" rx="1" fill="url(#mon2)"/>
+          <rect x="20" y="34" width="8" height="5" fill="#888"/>
+          <rect x="14" y="39" width="20" height="3" rx="1.5" fill="#888"/>
+        </svg>
+      </div>
+      <div class="label">Services</div>
+    </div>
 
-                                <h3 itemprop="name">{{ $product->name }}</h3>
-                                <p itemprop="description">{{ $product->tagline }}</p>
+    <!-- Portfolio -->
+    <div class="desktop-icon" data-window="win-portfolio" tabindex="0" aria-label="Portfolio">
+      <div class="di-img">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bf1" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#f5c842"/>
+              <stop offset="100%" stop-color="#c88a10"/>
+            </linearGradient>
+          </defs>
+          <rect x="17" y="6" width="14" height="7" rx="3" fill="#6a3e08"/>
+          <rect x="4" y="13" width="40" height="28" rx="3" fill="url(#bf1)"/>
+          <rect x="4" y="24" width="40" height="6" fill="#6a3e08"/>
+          <rect x="20" y="22" width="8" height="10" rx="2" fill="#6a3e08"/>
+        </svg>
+      </div>
+      <div class="label">Portfolio</div>
+    </div>
 
-                                @if ($product->tech_stack)
-                                    <div class="tech-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;">
-                                        @foreach ($product->tech_stack as $tech)
-                                            <span class="tech-tag">{{ $tech }}</span>
-                                        @endforeach
-                                    </div>
-                                @endif
+    <!-- Contact Us -->
+    <div class="desktop-icon" data-window="win-contact" tabindex="0" aria-label="Contact Us">
+      <div class="di-img">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="env1" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#a8d8a8"/>
+              <stop offset="100%" stop-color="#2e8b2e"/>
+            </linearGradient>
+          </defs>
+          <rect x="4" y="10" width="40" height="28" rx="3" fill="url(#env1)"/>
+          <polygon points="4,10 24,26 44,10" fill="rgba(255,255,255,0.4)"/>
+          <text x="24" y="32" text-anchor="middle" font-family="Segoe UI,Arial" font-size="10" font-weight="bold" fill="rgba(0,100,0,0.6)">@</text>
+        </svg>
+      </div>
+      <div class="label">Contact Us</div>
+    </div>
 
-                                @if ($product->price)
-                                    <div class="price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-                                        <span itemprop="priceCurrency" content="INR" style="display:none;">INR</span>
-                                        <span itemprop="price" content="{{ $product->price }}"
-                                            style="display:none;">{{ $product->price }}</span>
-                                        ₹{{ number_format($product->price, 0) }}<span>/month</span>
-                                    </div>
-                                @endif
+    <!-- Blog -->
+    <div class="desktop-icon" data-window="win-blog" tabindex="0" aria-label="Blog">
+      <div class="di-img">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="3" width="30" height="38" rx="2" fill="#e0e8f8"/>
+          <polygon points="30,3 38,11 30,11" fill="#3a6ab0"/>
+          <rect x="12" y="16" width="18" height="2" rx="1" fill="#3a6ab0"/>
+          <rect x="12" y="21" width="22" height="1.5" rx="0.75" fill="#7090c0"/>
+          <rect x="12" y="25" width="20" height="1.5" rx="0.75" fill="#7090c0"/>
+        </svg>
+      </div>
+      <div class="label">Blog</div>
+    </div>
 
-                                <div class="cta-buttons" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px;">
-                                    @if ($product->demo_url)
-                                        <a href="{{ $product->demo_url }}" target="_blank" rel="noopener noreferrer"
-                                            class="btn-demo btn btn-outline"
-                                            aria-label="View demo of {{ $product->name }}" itemprop="url">
-                                            View Demo
-                                        </a>
-                                    @endif
-                                    @if (isset($product->buy_url) && $product->buy_url)
-                                        <a href="{{ $product->buy_url }}" target="_blank" rel="noopener noreferrer"
-                                            class="btn-buy btn btn-primary" aria-label="Buy {{ $product->name }}">
-                                            Buy Now
-                                        </a>
-                                    @endif
-                                </div>
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
+    <!-- My Computer -->
+    <div class="desktop-icon" data-window="win-mycomputer" tabindex="0" aria-label="My Computer">
+      <div class="di-img">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="3" width="40" height="30" rx="4" fill="#b0b0b0"/>
+          <rect x="8" y="7" width="32" height="22" rx="2" fill="#4898e0"/>
+          <rect x="20" y="33" width="8" height="5" fill="#787878"/>
+          <rect x="12" y="38" width="24" height="4" rx="2" fill="#787878"/>
+        </svg>
+      </div>
+      <div class="label">My Computer</div>
+    </div>
 
+  </div>
 
-    {{-- ====================================================
-         HOW IT WORKS (Static — always visible)
-         ==================================================== --}}
-    <section id="how-it-works" class="how-it-works section-padding bg-light"
-        aria-label="How AmanProjects Works — Process">
-        <div class="container">
-            <div class="section-header text-center" data-aos="fade-up">
-                <h2 class="section-title">{{ $settings['how_it_works_title'] ?? 'How It Works' }}</h2>
-                <p class="section-subtitle">
-                    {{ $settings['how_it_works_subtitle'] ?? 'Three simple steps to get your project off the ground.' }}
-                </p>
-            </div>
-            <div class="steps-grid">
-                @foreach ($processSteps as $step)
-                    <article class="step-card" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}"
-                        aria-label="Step {{ $step->step_number }}: {{ $step->title }}">
-                        <div class="step-number" aria-hidden="true">{{ $step->step_number }}</div>
-                        <h3>{{ $step->title }}</h3>
-                        <p>{{ $step->description }}</p>
-                    </article>
-                @endforeach
-            </div>
+  <!-- APP WINDOWS -->
+
+  <!-- About Us Window -->
+  <div id="win-about" class="os-window active draggable resizable" style="left:80px;top:60px;width:520px;height:400px;">
+    <div class="title-bar">
+      <div class="title-bar-icon">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" fill="#fff"/><path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" fill="#fff"/></svg>
+      </div>
+      <div class="title-bar-text">About Us</div>
+      <div class="title-bar-controls">
+        <button aria-label="Minimize" title="Minimize"></button>
+        <button aria-label="Maximize" title="Maximize"></button>
+        <button aria-label="Close" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-body has-space" style="overflow:auto;">
+      <div class="about-hero">
+        <div class="about-avatar">
+          <svg viewBox="0 0 80 80" fill="none"><circle cx="40" cy="28" r="18" fill="#4fc3f7"/><path d="M8 80c0-17.673 14.327-32 32-32s32 14.327 32 32" fill="#0288d1"/></svg>
         </div>
-    </section>
-
-
-    {{-- ====================================================
-         TECH STACK (DB-driven, grouped by category)
-         ==================================================== --}}
-    @if ($techStacks->isNotEmpty())
-        @php
-            $grouped = $techStacks->groupBy('category');
-
-            // FontAwesome brand/solid icon map — matched by keyword (case-insensitive)
-            $techIconMap = [
-                'laravel'      => 'fab fa-laravel',
-                'php'          => 'fab fa-php',
-                'javascript'   => 'fab fa-js',
-                ' js'          => 'fab fa-js',
-                'typescript'   => 'fab fa-js',
-                'python'       => 'fab fa-python',
-                'node'         => 'fab fa-node-js',
-                'react'        => 'fab fa-react',
-                'vue'          => 'fab fa-vuejs',
-                'angular'      => 'fab fa-angular',
-                'svelte'       => 'fas fa-fire',
-                'html'         => 'fab fa-html5',
-                'css'          => 'fab fa-css3-alt',
-                'tailwind'     => 'fas fa-wind',
-                'bootstrap'    => 'fab fa-bootstrap',
-                'sass'         => 'fab fa-sass',
-                'git'          => 'fab fa-git-alt',
-                'github'       => 'fab fa-github',
-                'gitlab'       => 'fab fa-gitlab',
-                'docker'       => 'fab fa-docker',
-                'linux'        => 'fab fa-linux',
-                'ubuntu'       => 'fab fa-ubuntu',
-                'centos'       => 'fab fa-centos',
-                'fedora'       => 'fab fa-fedora',
-                'aws'          => 'fab fa-aws',
-                'amazon'       => 'fab fa-aws',
-                'azure'        => 'fas fa-cloud',
-                'google cloud' => 'fab fa-google',
-                'gcp'          => 'fab fa-google',
-                'firebase'     => 'fas fa-fire',
-                'mysql'        => 'fas fa-database',
-                'mariadb'      => 'fas fa-database',
-                'postgresql'   => 'fas fa-database',
-                'postgres'     => 'fas fa-database',
-                'sqlite'       => 'fas fa-database',
-                'mongodb'      => 'fas fa-database',
-                'redis'        => 'fas fa-memory',
-                'nginx'        => 'fas fa-server',
-                'apache'       => 'fas fa-server',
-                'wordpress'    => 'fab fa-wordpress',
-                'shopify'      => 'fab fa-shopify',
-                'stripe'       => 'fab fa-stripe',
-                'paypal'       => 'fab fa-paypal',
-                'razorpay'     => 'fas fa-rupee-sign',
-                'bash'         => 'fas fa-terminal',
-                'shell'        => 'fas fa-terminal',
-                'api'          => 'fas fa-plug',
-                'rest'         => 'fas fa-plug',
-                'graphql'      => 'fas fa-project-diagram',
-                'websocket'    => 'fas fa-bolt',
-                'socket'       => 'fas fa-bolt',
-                'jwt'          => 'fas fa-key',
-                'oauth'        => 'fas fa-shield-alt',
-                'security'     => 'fas fa-shield-alt',
-                'ssl'          => 'fas fa-lock',
-                'kali'         => 'fas fa-user-secret',
-                'metasploit'   => 'fas fa-user-secret',
-                'burp'         => 'fas fa-bug',
-                'nmap'         => 'fas fa-network-wired',
-                'figma'        => 'fab fa-figma',
-                'postman'      => 'fas fa-paper-plane',
-                'jira'         => 'fab fa-jira',
-                'trello'       => 'fab fa-trello',
-                'slack'        => 'fab fa-slack',
-                'java'         => 'fab fa-java',
-                'flutter'      => 'fas fa-mobile-alt',
-                'android'      => 'fab fa-android',
-                'apple'        => 'fab fa-apple',
-                'ios'          => 'fab fa-apple',
-                'npm'          => 'fab fa-npm',
-                'webpack'      => 'fas fa-cube',
-                'vite'         => 'fas fa-bolt',
-                'digitalocean' => 'fab fa-digital-ocean',
-                'cloudflare'   => 'fas fa-shield-alt',
-                'cpanel'       => 'fas fa-server',
-                'server'       => 'fas fa-server',
-                'cloud'        => 'fas fa-cloud',
-                'database'     => 'fas fa-database',
-                'mobile'       => 'fas fa-mobile-alt',
-                'web'          => 'fas fa-globe',
-                'api'          => 'fas fa-plug',
-            ];
-
-            $resolveTechIcon = function (string $name) use ($techIconMap): string {
-                $lower = strtolower($name);
-                foreach ($techIconMap as $keyword => $cls) {
-                    if (str_contains($lower, $keyword)) {
-                        return $cls;
-                    }
-                }
-                return 'fas fa-code';
-            };
-        @endphp
-        <section id="tech-stack" class="ts-section section-padding" aria-label="AmanProjects Technology Stack">
-
-            {{-- Decorative background blobs --}}
-            <div class="ts-blob ts-blob-1" aria-hidden="true"></div>
-            <div class="ts-blob ts-blob-2" aria-hidden="true"></div>
-
-            <div class="container" style="position:relative;z-index:1;">
-                <div class="section-header text-center" data-aos="fade-up">
-                    <span class="ts-eyebrow">Powered By</span>
-                    <h2 class="section-title">{{ $settings['tech_stack_title'] ?? 'Our Technology Stack' }}</h2>
-                    <p class="section-subtitle">
-                        {{ $settings['tech_stack_subtitle'] ?? 'Battle-tested tools we use to build secure, scalable applications.' }}
-                    </p>
-                </div>
-
-                @foreach ($grouped as $category => $techs)
-                    <div class="ts-category-block" data-aos="fade-up" data-aos-delay="{{ $loop->index * 80 }}">
-                        {{-- Category pill label --}}
-                        <div class="ts-category-label">
-                            <span class="ts-category-pill">{{ $category }}</span>
-                            <div class="ts-divider-line"></div>
-                        </div>
-
-                        <div class="ts-grid">
-                            @foreach ($techs as $tech)
-                                <div class="ts-card" aria-label="{{ $tech->name }} technology">
-                                    <div class="ts-card-inner">
-                                        <div class="ts-logo-wrap">
-                                            @if ($tech->logo)
-                                                <img src="{{ asset('storage/' . $tech->logo) }}"
-                                                    alt="{{ $tech->name }} — Technology used by AmanProjects"
-                                                    loading="lazy" decoding="async" width="48" height="48">
-                                            @else
-                                                <div class="ts-icon-fallback">
-                                                    <i class="{{ $resolveTechIcon($tech->name) }}" aria-hidden="true"></i>
-                                                </div>
-                                            @endif
-                                        </div>
-                                        <span class="ts-name">{{ $tech->name }}</span>
-                                    </div>
-                                    <div class="ts-card-glow" aria-hidden="true"></div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-
-    {{-- ====================================================
-         PROJECTS / PORTFOLIO (DB-driven, is_featured only)
-         ==================================================== --}}
-    @if ($projects->isNotEmpty())
-        <section id="portfolio" class="section-padding bg-light" aria-label="AmanProjects Portfolio — Featured Projects">
-            <div class="container">
-                <div class="section-header text-center" data-aos="fade-up">
-                    <h2 class="section-title">{{ $settings['portfolio_title'] ?? 'Featured Projects' }}</h2>
-                    <p class="section-subtitle">
-                        {{ $settings['portfolio_subtitle'] ?? 'Real-world solutions delivered for clients across India.' }}
-                    </p>
-                </div>
-                <div class="services-grid">
-                    @foreach ($projects as $project)
-                        <article class="project-card service-card" data-aos="fade-up"
-                            data-aos-delay="{{ $loop->index * 100 }}"
-                            aria-label="{{ $project->title }} project by AmanProjects">
-                            @if ($project->screenshots->isNotEmpty())
-                                <div class="service-image swiper card-swiper">
-                                    <div class="swiper-wrapper">
-                                        @if ($project->thumbnail)
-                                            <div class="swiper-slide">
-                                                <img src="{{ asset('storage/' . $project->thumbnail) }}"
-                                                    alt="{{ $project->title }} — {{ $project->category ?? 'project' }} by AmanProjects Bihar"
-                                                    loading="lazy" decoding="async" width="400" height="250" style="width:100%;height:100%;object-fit:cover;">
-                                            </div>
-                                        @endif
-                                        @foreach ($project->screenshots as $shot)
-                                            <div class="swiper-slide">
-                                                <img src="{{ asset('storage/' . $shot->image_path) }}"
-                                                    alt="{{ $shot->caption ?? $project->title }}" loading="lazy" decoding="async" width="400"
-                                                    height="250" style="width:100%;height:100%;object-fit:cover;">
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    <div class="swiper-button-prev"></div>
-                                    <div class="swiper-button-next"></div>
-                                    <div class="swiper-pagination"></div>
-                                </div>
-                            @elseif ($project->thumbnail)
-                                <div class="service-image">
-                                    <img src="{{ asset('storage/' . $project->thumbnail) }}"
-                                        alt="{{ $project->title }} — {{ $project->category ?? 'project' }} by AmanProjects Bihar"
-                                        loading="lazy" decoding="async" width="400" height="250">
-                                </div>
-                            @endif
-                            <div class="service-content">
-                                @if ($project->category)
-                                    <span class="category-badge">{{ $project->category }}</span>
-                                @endif
-                                <h3>{{ $project->title }}</h3>
-
-                                @if ($project->client_name)
-                                    <p class="client" style="font-size:.85rem;color:var(--text-muted);margin-bottom:8px;">
-                                        Client: <strong>{{ $project->client_name }}</strong>
-                                    </p>
-                                @endif
-
-                                <p>{{ Str::limit($project->description, 120) }}</p>
-
-                                @if ($project->tech_stack)
-                                    <div class="tech-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;">
-                                        @foreach ($project->tech_stack as $tech)
-                                            <span class="tech-tag">{{ $tech }}</span>
-                                        @endforeach
-                                    </div>
-                                @endif
-
-                                @if ($project->completed_at)
-                                    <p class="date" style="font-size:.8rem;color:var(--text-muted);">
-                                        Completed: {{ $project->completed_at->format('M Y') }}
-                                    </p>
-                                @endif
-
-                                <div class="cta-buttons" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px;">
-                                    @if ($project->demo_url)
-                                        <a href="{{ $project->demo_url }}" target="_blank" rel="noopener noreferrer"
-                                            class="btn btn-primary" aria-label="View live demo of {{ $project->title }}">
-                                            Live Demo
-                                        </a>
-                                    @endif
-                                    @if ($project->github_url)
-                                        <a href="{{ $project->github_url }}" target="_blank" rel="noopener noreferrer"
-                                            class="btn btn-outline" aria-label="{{ $project->title }} GitHub repository">
-                                            <i class="fab fa-github" aria-hidden="true"></i> GitHub
-                                        </a>
-                                    @endif
-                                </div>
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
-
-
-    {{-- ====================================================
-         PRICING SECTION (DB-driven)
-         - is_active, ordered by sort_order
-         - features eager loaded, is_included toggle
-         ==================================================== --}}
-    @if ($plans->isNotEmpty())
-        <section id="pricing" class="section-padding" aria-label="AmanProjects Pricing Plans">
-            <div class="container">
-                <div class="section-header text-center" data-aos="fade-up">
-                    <h2 class="section-title">{{ $settings['pricing_title'] ?? 'Transparent Pricing' }}</h2>
-                    <p class="section-subtitle">
-                        {{ $settings['pricing_subtitle'] ?? 'No hidden costs. Choose a plan that fits your business.' }}
-                    </p>
-                </div>
-                <div class="services-grid">
-                    @foreach ($plans as $plan)
-                        <div class="pricing-card service-card {{ $plan->is_featured ? 'pricing-featured featured-card' : '' }}"
-                            data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}"
-                            aria-label="{{ $plan->name }} pricing plan">
-
-                            @if ($plan->is_featured && $plan->badge_text)
-                                <div class="popular-badge featured-badge">{{ $plan->badge_text }}</div>
-                            @endif
-
-                            <div class="service-content">
-                                <h3>{{ $plan->name }}</h3>
-
-                                @if ($plan->tagline)
-                                    <p class="plan-tagline" style="color:var(--text-muted);margin-bottom:15px;">
-                                        {{ $plan->tagline }}</p>
-                                @endif
-
-                                <div class="plan-price price" style="font-size:2rem;font-weight:800;margin-bottom:20px;">
-                                    ₹{{ number_format($plan->price, 0) }}
-                                    <span style="font-size:1rem;font-weight:400;">/{{ $plan->billing_cycle }}</span>
-                                </div>
-
-                                <ul class="features-list service-features" style="margin-bottom:20px;">
-                                    @foreach ($plan->features as $feature)
-                                        <li class="{{ $feature->is_included ? 'included' : 'excluded' }}"
-                                            style="{{ $feature->is_included ? '' : 'text-decoration:line-through;opacity:.5;' }}">
-                                            @if ($feature->is_included)
-                                                <i class="fas fa-check" aria-hidden="true"
-                                                    style="color:var(--primary)"></i>
-                                            @else
-                                                <i class="fas fa-times" aria-hidden="true" style="color:#ef4444"></i>
-                                            @endif
-                                            {{ $feature->feature_text }}
-                                        </li>
-                                    @endforeach
-                                </ul>
-
-                                <a href="{{ $plan->cta_url ?? '#contact' }}"
-                                    class="btn {{ $plan->is_featured ? 'btn-primary' : 'btn-outline' }}"
-                                    style="width:100%;text-align:center;"
-                                    aria-label="{{ $plan->cta_text ?? 'Get Started' }} — {{ $plan->name }} plan">
-                                    {{ $plan->cta_text ?? 'Get Started' }}
-                                </a>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
-
-
-    {{-- ====================================================
-         TESTIMONIALS (DB-driven — Swiper carousel)
-         - is_active = true, featured first
-         - initials avatar fallback
-         ==================================================== --}}
-    @if ($testimonials->isNotEmpty())
-        <section id="testimonials" class="section-padding bg-light" aria-label="Client Testimonials for AmanProjects">
-            <div class="container">
-                <div class="section-header text-center" data-aos="fade-up">
-                    <h2 class="section-title">{{ $settings['testimonials_title'] ?? 'What Clients Say' }}</h2>
-                    <p class="section-subtitle">
-                        {{ $settings['testimonials_subtitle'] ?? 'Trusted by businesses across India.' }}</p>
-                </div>
-                <div class="swiper testimonials-swiper" data-aos="fade-up">
-                    <div class="swiper-wrapper">
-                        @foreach ($testimonials as $testimonial)
-                            <div class="swiper-slide">
-                                <div class="testimonial-card {{ $testimonial->is_featured ? 'featured-testimonial' : '' }}"
-                                    itemscope itemtype="https://schema.org/Review">
-                                    {{-- Star Rating --}}
-                                    <div class="stars" aria-label="{{ $testimonial->rating ?? 5 }} out of 5 stars">
-                                        @for ($i = 1; $i <= 5; $i++)
-                                            <span
-                                                class="{{ $i <= ($testimonial->rating ?? 5) ? 'star-filled' : 'star-empty' }}"
-                                                aria-hidden="true">★</span>
-                                        @endfor
-                                    </div>
-
-                                    <p class="review" itemprop="reviewBody">"{{ $testimonial->review }}"</p>
-
-                                    <div class="reviewer user-info">
-                                        @if ($testimonial->client_avatar)
-                                            <img src="{{ asset('storage/' . $testimonial->client_avatar) }}"
-                                                alt="{{ $testimonial->client_name }} — AmanProjects client"
-                                                loading="lazy" decoding="async" width="60" height="60"
-                                                itemprop="image">
-                                        @else
-                                            <div class="avatar-initial" aria-hidden="true"
-                                                style="width:48px;height:48px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;flex-shrink:0;">
-                                                {{ strtoupper(substr($testimonial->client_name, 0, 1)) }}
-                                            </div>
-                                        @endif
-                                        <div>
-                                            <strong itemprop="author">{{ $testimonial->client_name }}</strong>
-                                            @if ($testimonial->client_designation)
-                                                <span
-                                                    style="display:block;font-size:.85rem;color:var(--text-muted);">{{ $testimonial->client_designation }}</span>
-                                            @endif
-                                            @if ($testimonial->client_company)
-                                                <span style="display:block;font-size:.8rem;color:var(--text-muted);">@
-                                                    {{ $testimonial->client_company }}</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                    <div class="swiper-pagination" aria-label="Testimonials pagination"></div>
-                </div>
-            </div>
-        </section>
-    @endif
-
-
-    {{-- ====================================================
-         FAQ SECTION (DB-driven — Alpine.js accordion)
-         - is_active, ordered by sort_order
-         ==================================================== --}}
-    @if ($faqs->isNotEmpty())
-        <section id="faq" class="faq section-padding" aria-label="Frequently Asked Questions about AmanProjects">
-            <div class="container">
-                <div class="section-header text-center" data-aos="fade-up">
-                    <h2 class="section-title">{{ $settings['faq_title'] ?? 'Frequently Asked Questions' }}</h2>
-                    <p class="section-subtitle">
-                        {{ $settings['faq_subtitle'] ?? 'Everything you need to know about working with AmanProjects.' }}
-                    </p>
-                </div>
-                <div class="faq-accordion" data-aos="fade-up">
-                    @foreach ($faqs as $faq)
-                        <div class="faq-item" x-data="{ open: false }">
-                            <button @click="open = !open" class="faq-question" :aria-expanded="open"
-                                aria-controls="faq-answer-{{ $faq->id }}">
-                                {{ $faq->question }}
-                                <span x-text="open ? '−' : '+'" aria-hidden="true"></span>
-                            </button>
-                            <div x-show="open" x-transition class="faq-answer" id="faq-answer-{{ $faq->id }}"
-                                role="region">
-                                <p>{{ $faq->answer }}</p>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
-
-
-    {{-- ====================================================
-         BLOG / CODEBB PREVIEW (DB-driven)
-         - is_published = true, latest 3, featured first
-         ==================================================== --}}
-    @if ($posts->isNotEmpty())
-        <section id="blog" class="section-padding bg-light" aria-label="CodeBB — Latest from AmanProjects Blog">
-            <div class="container">
-                <div class="section-header text-center" data-aos="fade-up">
-                    <h2 class="section-title">{{ $settings['blog_title'] ?? 'Latest from CodeBB' }}</h2>
-                    <p class="section-subtitle">
-                        {{ $settings['blog_subtitle'] ?? 'Tech insights, security tips, and product updates from Bihar.' }}
-                    </p>
-                </div>
-                <div class="services-grid">
-                    @foreach ($posts as $post)
-                        <article class="blog-card service-card {{ $post->is_featured ? 'featured-post' : '' }}"
-                            data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}" itemscope
-                            itemtype="https://schema.org/BlogPosting" aria-label="{{ $post->title }} blog post">
-
-                            @if ($post->thumbnail)
-                                <div class="service-image">
-                                    <img src="{{ asset('storage/' . $post->thumbnail) }}"
-                                        alt="{{ $post->title }} — AmanProjects CodeBB blog" loading="lazy"
-                                        decoding="async" width="400" height="250" itemprop="image">
-                                </div>
-                            @endif
-
-                            <div class="service-content">
-                                @if ($post->category)
-                                    <span class="post-category category-badge">{{ $post->category }}</span>
-                                @endif
-
-                                <h3 itemprop="headline">{{ $post->title }}</h3>
-
-                                @if ($post->excerpt)
-                                    <p itemprop="description">{{ Str::limit($post->excerpt, 100) }}</p>
-                                @endif
-
-                                <div class="post-meta"
-                                    style="display:flex;gap:12px;font-size:.8rem;color:var(--text-muted);margin:10px 0;">
-                                    @if ($post->published_at)
-                                        <span itemprop="datePublished"
-                                            content="{{ $post->published_at->toIso8601String() }}">
-                                            <i class="fas fa-calendar" aria-hidden="true"></i>
-                                            {{ $post->published_at->format('d M Y') }}
-                                        </span>
-                                    @endif
-                                    <span><i class="fas fa-eye" aria-hidden="true"></i> {{ $post->views ?? 0 }}
-                                        views</span>
-                                </div>
-
-                                <a href="{{ route('blog.show', $post->slug) }}" class="btn-text"
-                                    aria-label="Read {{ $post->title }}">
-                                    Read More <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                                </a>
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
-
-
-    {{-- ====================================================
-         ABOUT BRIEF / E-E-A-T SECTION (Part 2.4 of map.md)
-         ==================================================== --}}
-    <section aria-label="About AmanProjects" class="section-padding" id="about-brief" itemscope
-        itemtype="https://schema.org/Organization">
-
-        <meta itemprop="name" content="AmanProjects">
-        <meta itemprop="url" content="https://amanprojects.com">
-        <meta itemprop="foundingLocation" content="Bihar, India">
-        <meta itemprop="description"
-            content="AmanProjects is a software development company founded by Aman, a Full Stack Laravel Developer and Ethical Hacker from Bihar, India.">
-
-        <div class="container">
-            <div class="contact-grid" style="align-items:center;">
-                <div data-aos="fade-right">
-                    <div class="section-header" style="margin-left:0;text-align:left;">
-                        <h2 class="section-title">{{ $settings['about_title'] ?? 'About AmanProjects' }}</h2>
-                    </div>
-                    <p itemprop="description" style="margin-bottom:20px;color:var(--text-muted);">
-                        {!! $settings['about_description_1'] ?? $settings['about_text'] ?? 'Founded by Aman, a Full Stack Laravel Developer and Ethical Hacker with 3+ years of experience building SaaS products and conducting security audits. AmanProjects serves coaching centres, libraries, fintech startups, and SMBs across India with production-grade software solutions.' !!}
-                    </p>
-                    <div class="hero-stats" style="justify-content:flex-start;">
-                        <div class="stat-item">
-                            <span class="stat-number">{{ $settings['years_exp'] ?? '3+' }}</span>
-                            <span class="stat-label">Years Experience</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">{{ $settings['projects_count'] ?? '50+' }}</span>
-                            <span class="stat-label">Projects Done</span>
-                        </div>
-                    </div>
-                    <a href="{{ route('about') }}" class="btn btn-primary" style="margin-top:30px;"
-                        id="home-about-cta">
-                        Our Full Story <i class="fas fa-arrow-right" aria-hidden="true"></i>
-                    </a>
-                </div>
-                <div data-aos="fade-left">
-                    <img src="{{ isset($settings['about_image']) && $settings['about_image'] ? asset('storage/' . $settings['about_image']) : asset('assets/img/about-brief.jpg') }}"
-                        alt="Aman — Full Stack Laravel Developer & Ethical Hacker from Bihar India, founder of AmanProjects"
-                        loading="lazy" decoding="async" width="600" height="400"
-                        style="border-radius:24px;box-shadow:var(--shadow-lg);width:100%;">
-                </div>
-            </div>
+        <div>
+          <h2 class="header-group" style="margin:0 0 4px;">{{ $settings['about_title'] ?? 'Hi, I\'m Aman 👋' }}</h2>
+          <p class="instruction" style="margin:0;">{{ $settings['about_subtitle'] ?? 'Full-stack Developer & Creative Designer' }}</p>
         </div>
-    </section>
-
-
-    {{-- ====================================================
-         CONTACT FORM SECTION (stores to ContactInquiry DB)
-         ==================================================== --}}
-    <section id="contact" class="section-padding bg-light" aria-label="Contact AmanProjects — Send Enquiry" itemscope
-        itemtype="https://schema.org/ContactPage">
-        <div class="container">
-            <div class="section-header text-center" data-aos="fade-up">
-                <h2 class="section-title">Get in Touch</h2>
-                <p class="section-subtitle">Have a project or need a security audit? We reply within 24 hours.</p>
-            </div>
-            <div class="contact-grid">
-                {{-- Contact Info from settings --}}
-                <aside class="contact-info" data-aos="fade-right" aria-label="AmanProjects contact details">
-                    <div class="contact-info-card" itemscope itemtype="https://schema.org/Organization">
-                        <meta itemprop="name" content="AmanProjects">
-                        @if ($settings['phone'] ?? null)
-                            <div class="info-item">
-                                <div class="info-icon" aria-hidden="true"><i class="fas fa-phone-alt"></i></div>
-                                <div class="info-text">
-                                    <h3>Phone / WhatsApp</h3>
-                                    <p><a href="tel:{{ $settings['phone'] }}"
-                                            itemprop="telephone">{{ $settings['phone'] }}</a></p>
-                                </div>
-                            </div>
-                        @endif
-                        @if ($settings['email'] ?? null)
-                            <div class="info-item">
-                                <div class="info-icon" aria-hidden="true"><i class="fas fa-envelope"></i></div>
-                                <div class="info-text">
-                                    <h3>Email</h3>
-                                    <p><a href="mailto:{{ $settings['email'] }}"
-                                            itemprop="email">{{ $settings['email'] }}</a></p>
-                                </div>
-                            </div>
-                        @endif
-                        @if ($settings['whatsapp'] ?? null)
-                            <div class="info-item">
-                                <div class="info-icon" aria-hidden="true"><i class="fab fa-whatsapp"></i></div>
-                                <div class="info-text">
-                                    <h3>WhatsApp</h3>
-                                    <p>
-                                        <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $settings['whatsapp']) }}"
-                                            target="_blank" rel="noopener noreferrer" aria-label="WhatsApp AmanProjects">
-                                            WhatsApp Us
-                                        </a>
-                                    </p>
-                                </div>
-                            </div>
-                        @endif
-                        <div class="info-item">
-                            <div class="info-icon" aria-hidden="true"><i class="fas fa-map-marker-alt"></i></div>
-                            <div class="info-text">
-                                <h3>Location</h3>
-                                <p itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
-                                    <span itemprop="addressRegion">Bihar</span>,
-                                    <span itemprop="addressCountry">India</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
-
-                {{-- Contact Form --}}
-                <div class="contact-form-wrapper" data-aos="fade-left">
-                    <div class="contact-info-card">
-                        @if (session('success'))
-                            <div class="alert-success" role="alert"
-                                style="background:#d1fae5;color:#065f46;padding:12px 20px;border-radius:8px;margin-bottom:20px;">
-                                <i class="fas fa-check-circle" aria-hidden="true"></i> {{ session('success') }}
-                            </div>
-                        @endif
-                        @if (session('error'))
-                            <div class="alert-error" role="alert"
-                                style="background:#fee2e2;color:#991b1b;padding:12px 20px;border-radius:8px;margin-bottom:20px;">
-                                {{ session('error') }}
-                            </div>
-                        @endif
-
-                        <form action="{{ route('contact.submit') }}" method="POST" class="contact-form"
-                            aria-label="Contact AmanProjects enquiry form" novalidate>
-                            @csrf
-
-                            <div class="form-group">
-                                <label for="cf-name">Full Name <span aria-hidden="true">*</span></label>
-                                <input type="text" id="cf-name" name="name" value="{{ old('name') }}"
-                                    placeholder="Your full name" required aria-required="true">
-                                @error('name')
-                                    <span class="error" role="alert"
-                                        style="color:red;font-size:.85rem;">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <div class="form-group">
-                                <label for="cf-email">Email Address <span aria-hidden="true">*</span></label>
-                                <input type="email" id="cf-email" name="email" value="{{ old('email') }}"
-                                    placeholder="you@example.com" required aria-required="true">
-                                @error('email')
-                                    <span class="error" role="alert"
-                                        style="color:red;font-size:.85rem;">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <div class="form-group">
-                                <label for="cf-phone">Phone Number</label>
-                                <input type="tel" id="cf-phone" name="phone" value="{{ old('phone') }}"
-                                    placeholder="+91 99999 99999">
-                            </div>
-
-                            @if ($services->isNotEmpty())
-                                <div class="form-group">
-                                    <label for="cf-service">Interested Service</label>
-                                    <select id="cf-service" name="service_interested">
-                                        <option value="">Select Service (Optional)</option>
-                                        @foreach ($services as $service)
-                                            <option value="{{ $service->title }}"
-                                                {{ old('service_interested') == $service->title ? 'selected' : '' }}>
-                                                {{ $service->title }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            @endif
-
-                            <div class="form-group">
-                                <label for="cf-subject">Subject</label>
-                                <input type="text" id="cf-subject" name="subject" value="{{ old('subject') }}"
-                                    placeholder="e.g. Laravel SaaS Development Enquiry">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="cf-message">Message <span aria-hidden="true">*</span></label>
-                                <textarea id="cf-message" name="message" rows="5"
-                                    placeholder="Describe your project or security audit requirements..." required aria-required="true"
-                                    style="width:100%;padding:12px 16px;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;font-family:var(--font-body);resize:vertical;outline:none;">{{ old('message') }}</textarea>
-                                @error('message')
-                                    <span class="error" role="alert"
-                                        style="color:red;font-size:.85rem;">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <button type="submit" id="contact-submit-btn" class="btn btn-primary" style="width:100%;">
-                                <i class="fas fa-paper-plane" aria-hidden="true"></i> Send Message
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+      </div>
+      <fieldset>
+        <legend>Who We Are</legend>
+        <p style="margin:4px 0;">{{ $settings['about_description_1'] ?? 'We are a passionate team of developers and designers building modern web experiences. Our mission is to deliver clean, fast, and beautiful digital products that make a real impact.' }}</p>
+        @if(!empty($settings['about_description_2']))
+          <p style="margin:4px 0;">{{ $settings['about_description_2'] }}</p>
+        @endif
+      </fieldset>
+      <fieldset>
+        <legend>Our Tech Stack</legend>
+        <div class="skill-tags">
+          <span class="skill-tag">Laravel 12</span>
+          <span class="skill-tag">PHP 8.5</span>
+          <span class="skill-tag">JavaScript</span>
+          <span class="skill-tag">MySQL</span>
+          <span class="skill-tag">Tailwind CSS</span>
+          <span class="skill-tag">REST APIs</span>
+          <span class="skill-tag">Ethical Hacking / VAPT</span>
         </div>
-    </section>
+      </fieldset>
+      <section style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px;">
+        <button class="default" onclick="openWindow('win-contact')">Contact Me</button>
+        <button onclick="openWindow('win-portfolio')">See Portfolio</button>
+      </section>
+    </div>
+    <div class="resize-handle n" data-dir="n"></div><div class="resize-handle s" data-dir="s"></div>
+    <div class="resize-handle e" data-dir="e"></div><div class="resize-handle w" data-dir="w"></div>
+    <div class="resize-handle nw" data-dir="nw"></div><div class="resize-handle ne" data-dir="ne"></div>
+    <div class="resize-handle sw" data-dir="sw"></div><div class="resize-handle se" data-dir="se"></div>
+  </div>
 
+  <!-- Services Window -->
+  <div id="win-services" class="os-window draggable resizable" style="left:160px;top:100px;width:540px;height:420px;">
+    <div class="title-bar">
+      <div class="title-bar-icon">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="9" rx="1" fill="#fff"/><rect x="6" y="11" width="4" height="2" fill="#cce"/><rect x="4" y="13" width="8" height="1" rx="0.5" fill="#cce"/></svg>
+      </div>
+      <div class="title-bar-text">Our Services</div>
+      <div class="title-bar-controls">
+        <button aria-label="Minimize" title="Minimize"></button>
+        <button aria-label="Maximize" title="Maximize"></button>
+        <button aria-label="Close" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-body has-space" style="overflow:auto;">
+      <p class="instruction"><span class="instruction-primary">What We Offer</span><br>{{ $settings['services_subtitle'] ?? 'Premium digital services crafted with care.' }}</p>
+      <div class="services-grid">
+        @forelse($services as $service)
+          <div class="service-card">
+            <div class="service-icon">{!! $service->icon ?? '⚡' !!}</div>
+            <strong>{{ $service->title }}</strong>
+            <p>{{ $service->short_description ?? $service->description }}</p>
+          </div>
+        @empty
+          <div class="service-card"><div class="service-icon">🌐</div><strong>Web Development</strong><p>Custom websites built with modern frameworks.</p></div>
+          <div class="service-card"><div class="service-icon">📱</div><strong>Mobile Apps</strong><p>Cross-platform mobile applications.</p></div>
+          <div class="service-card"><div class="service-icon">🔒</div><strong>Security Audits</strong><p>VAPT & pen testing for web applications.</p></div>
+        @endforelse
+      </div>
+      <section style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px;">
+        <button class="default" onclick="openWindow('win-contact')">Get a Quote</button>
+      </section>
+    </div>
+    <div class="resize-handle n" data-dir="n"></div><div class="resize-handle s" data-dir="s"></div>
+    <div class="resize-handle e" data-dir="e"></div><div class="resize-handle w" data-dir="w"></div>
+    <div class="resize-handle nw" data-dir="nw"></div><div class="resize-handle ne" data-dir="ne"></div>
+    <div class="resize-handle sw" data-dir="sw"></div><div class="resize-handle se" data-dir="se"></div>
+  </div>
 
-    {{-- ====================================================
-         CTA BANNER
-         ==================================================== --}}
-    <section class="cta-banner section-padding" aria-label="Call to action — Contact AmanProjects">
-        <div class="container">
-            <div class="cta-card">
-                <h2>{{ $settings['cta_headline'] ?? 'Ready to Build Something Secure & Scalable?' }}</h2>
-                <p>{{ $settings['cta_subtext'] ?? "Let's discuss your project. Get a free consultation from a Laravel developer who also thinks like a hacker." }}
-                </p>
-                <div class="cta-btns">
-                    <a href="#contact" class="btn btn-primary" id="cta-contact-btn">Get Free Consultation</a>
-                    <a href="{{ route('services') }}" class="btn btn-outline" id="cta-services-btn">View All
-                        Services</a>
-                </div>
+  <!-- Portfolio Window -->
+  <div id="win-portfolio" class="os-window draggable resizable" style="left:200px;top:80px;width:580px;height:450px;">
+    <div class="title-bar">
+      <div class="title-bar-icon">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="1" fill="#fff"/><rect x="5" y="2" width="6" height="3" rx="1" fill="#ffd"/></svg>
+      </div>
+      <div class="title-bar-text">Portfolio / Products</div>
+      <div class="title-bar-controls">
+        <button aria-label="Minimize" title="Minimize"></button>
+        <button aria-label="Maximize" title="Maximize"></button>
+        <button aria-label="Close" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-body has-space" style="overflow:auto;">
+      <p class="instruction"><span class="instruction-primary">Our Featured Products & Projects</span></p>
+      <div class="portfolio-grid">
+        @forelse($products as $product)
+          <div class="portfolio-card">
+            <div class="portfolio-thumb" style="background:linear-gradient(135deg,#667eea,#764ba2);">
+              @if($product->image_url)
+                <img src="{{ asset($product->image_url) }}" alt="{{ $product->name }}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+              @else
+                <span>{{ $product->category ?? 'Product' }}</span>
+              @endif
             </div>
+            <p><strong>{{ $product->name }}</strong><br><small>{{ $product->short_description ?? Str::limit($product->description, 50) }}</small></p>
+          </div>
+        @empty
+          <div class="portfolio-card">
+            <div class="portfolio-thumb" style="background:linear-gradient(135deg,#667eea,#764ba2);"><span>SaaS Platform</span></div>
+            <p><strong>AP Coaching SaaS</strong><br><small>Laravel + MySQL</small></p>
+          </div>
+          <div class="portfolio-card">
+            <div class="portfolio-thumb" style="background:linear-gradient(135deg,#f093fb,#f5576c);"><span>Library Management</span></div>
+            <p><strong>AP Library App</strong><br><small>Laravel + Vue</small></p>
+          </div>
+        @endforelse
+      </div>
+    </div>
+    <div class="resize-handle n" data-dir="n"></div><div class="resize-handle s" data-dir="s"></div>
+    <div class="resize-handle e" data-dir="e"></div><div class="resize-handle w" data-dir="w"></div>
+    <div class="resize-handle nw" data-dir="nw"></div><div class="resize-handle ne" data-dir="ne"></div>
+    <div class="resize-handle sw" data-dir="sw"></div><div class="resize-handle se" data-dir="se"></div>
+  </div>
+
+  <!-- Contact Us Window -->
+  <div id="win-contact" class="os-window draggable resizable" style="left:240px;top:90px;width:440px;height:460px;">
+    <div class="title-bar">
+      <div class="title-bar-icon">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1" fill="#fff"/><path d="M1 5l7 5 7-5" stroke="#6bf" stroke-width="1.5"/></svg>
+      </div>
+      <div class="title-bar-text">Contact Us</div>
+      <div class="title-bar-controls">
+        <button aria-label="Minimize" title="Minimize"></button>
+        <button aria-label="Maximize" title="Maximize"></button>
+        <button aria-label="Close" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-body has-space" style="overflow:auto;">
+      <p class="instruction"><span class="instruction-primary">Get in Touch</span><br>We'd love to hear from you. Send us a message!</p>
+      <form id="contactForm" onsubmit="handleContactFormSubmit(event)">
+        @csrf
+        <div class="form-row">
+          <label for="cf-name">Your Name</label>
+          <input type="text" id="cf-name" name="name" placeholder="John Doe" required />
         </div>
-    </section>
+        <div class="form-row">
+          <label for="cf-email">Email Address</label>
+          <input type="email" id="cf-email" name="email" placeholder="john@example.com" required />
+        </div>
+        <div class="form-row">
+          <label for="cf-phone">Phone Number</label>
+          <input type="text" id="cf-phone" name="phone" placeholder="+91 9876543210" />
+        </div>
+        <div class="form-row">
+          <label for="cf-subject">Subject</label>
+          <input type="text" id="cf-subject" name="subject" placeholder="Project Inquiry" />
+        </div>
+        <div class="form-row">
+          <label for="cf-msg">Message</label>
+          <textarea id="cf-msg" name="message" rows="4" placeholder="Tell us about your project..." required style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+        </div>
+        <div class="contact-links" style="margin-top:8px;font-size:12px;">
+          <a href="mailto:{{ $settings['email'] ?? 'hello@amanprojects.in' }}">📧 {{ $settings['email'] ?? 'hello@amanprojects.in' }}</a>
+          <a href="tel:{{ $settings['phone'] ?? '+91 98765 43210' }}">📞 {{ $settings['phone'] ?? '+91 98765 43210' }}</a>
+        </div>
+        <section style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px;">
+          <button type="submit" class="default">Send Message</button>
+          <button type="reset">Clear</button>
+        </section>
+      </form>
+      <div id="contact-success" style="display:none;" class="contact-success-msg">
+        ✅ Message sent! We'll get back to you soon.
+      </div>
+    </div>
+    <div class="resize-handle n" data-dir="n"></div><div class="resize-handle s" data-dir="s"></div>
+    <div class="resize-handle e" data-dir="e"></div><div class="resize-handle w" data-dir="w"></div>
+    <div class="resize-handle nw" data-dir="nw"></div><div class="resize-handle ne" data-dir="ne"></div>
+    <div class="resize-handle sw" data-dir="sw"></div><div class="resize-handle se" data-dir="se"></div>
+  </div>
 
-@endsection
+  <!-- Blog Window -->
+  <div id="win-blog" class="os-window draggable resizable" style="left:280px;top:80px;width:520px;height:430px;">
+    <div class="title-bar">
+      <div class="title-bar-icon">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1" fill="#fff"/><rect x="4" y="5" width="8" height="1.2" fill="#aaf"/><rect x="4" y="8" width="6" height="1.2" fill="#ccf"/></svg>
+      </div>
+      <div class="title-bar-text">Blog</div>
+      <div class="title-bar-controls">
+        <button aria-label="Minimize" title="Minimize"></button>
+        <button aria-label="Maximize" title="Maximize"></button>
+        <button aria-label="Close" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-body has-space" style="overflow:auto;">
+      <p class="instruction"><span class="instruction-primary">Latest Articles</span></p>
+      <div class="blog-list">
+        @forelse($posts as $post)
+          <div class="blog-post">
+            <div class="blog-meta"><span class="blog-cat">{{ $post->category ?? 'Tech' }}</span><span class="blog-date">{{ $post->published_at ? $post->published_at->format('M d, Y') : now()->format('M d, Y') }}</span></div>
+            <h3>{{ $post->title }}</h3>
+            <p>{{ Str::limit(strip_tags($post->content), 120) }}</p>
+          </div>
+        @empty
+          <div class="blog-post">
+            <div class="blog-meta"><span class="blog-cat">Web Dev</span><span class="blog-date">Aug 2026</span></div>
+            <h3>Building a Windows 7 UI in Pure CSS</h3>
+            <p>A deep dive into recreating the iconic Aero glass design using modern CSS features...</p>
+          </div>
+          <div class="blog-post">
+            <div class="blog-meta"><span class="blog-cat">Security</span><span class="blog-date">Jul 2026</span></div>
+            <h3>SaaS Security Best Practices in Laravel 12</h3>
+            <p>Essential security configurations and VAPT check points for Laravel apps...</p>
+          </div>
+        @endforelse
+      </div>
+    </div>
+    <div class="resize-handle n" data-dir="n"></div><div class="resize-handle s" data-dir="s"></div>
+    <div class="resize-handle e" data-dir="e"></div><div class="resize-handle w" data-dir="w"></div>
+    <div class="resize-handle nw" data-dir="nw"></div><div class="resize-handle ne" data-dir="ne"></div>
+    <div class="resize-handle sw" data-dir="sw"></div><div class="resize-handle se" data-dir="se"></div>
+  </div>
 
+  <!-- My Computer Window -->
+  <div id="win-mycomputer" class="os-window draggable resizable" style="left:320px;top:70px;width:480px;height:360px;">
+    <div class="title-bar">
+      <div class="title-bar-icon">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="9" rx="1" fill="#9ec"/><rect x="6" y="11" width="4" height="2" fill="#9ec"/><rect x="4" y="13" width="8" height="1" rx="0.5" fill="#9ec"/></svg>
+      </div>
+      <div class="title-bar-text">My Computer</div>
+      <div class="title-bar-controls">
+        <button aria-label="Minimize" title="Minimize"></button>
+        <button aria-label="Maximize" title="Maximize"></button>
+        <button aria-label="Close" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-body" style="padding:0;overflow:auto;display:flex;flex-direction:column;">
+      <ul role="menubar" class="can-hover">
+        <li role="menuitem" tabindex="0">File
+          <ul role="menu">
+            <li role="menuitem"><button onclick="closeActiveWindow()">Close</button></li>
+          </ul>
+        </li>
+        <li role="menuitem" tabindex="0">Help
+          <ul role="menu">
+            <li role="menuitem"><button onclick="openWindow('win-about')">About AmanOS</button></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="explorer-body">
+        <div class="explorer-sidebar">
+          <div class="sidebar-section">System Folders</div>
+          <ul class="tree-view">
+            <li>📁 Desktop</li>
+            <li>📁 Documents</li>
+            <li>📁 Downloads</li>
+            <li>📁 Pictures</li>
+          </ul>
+        </div>
+        <div class="explorer-main">
+          <div class="explorer-item" ondblclick="openWindow('win-about')">
+            <div class="ei-icon"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="10" r="7" fill="#4a9ad4"/><ellipse cx="16" cy="25" rx="10" ry="7" fill="#1a6aad"/></svg></div><span>About Us</span>
+          </div>
+          <div class="explorer-item" ondblclick="openWindow('win-services')">
+            <div class="ei-icon"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="30" height="20" rx="2" fill="#5ab0e8"/><rect x="2" y="3" width="28" height="18" rx="1" fill="#d0eaff"/><rect x="12" y="22" width="8" height="3" fill="#888"/><rect x="8" y="25" width="16" height="3" rx="1" fill="#888"/></svg></div><span>Services</span>
+          </div>
+          <div class="explorer-item" ondblclick="openWindow('win-portfolio')">
+            <div class="ei-icon"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="2" width="10" height="6" rx="2" fill="#b07010"/><rect x="2" y="8" width="28" height="20" rx="2" fill="#f0b830"/><rect x="2" y="15" width="28" height="5" fill="#b07010"/></svg></div><span>Portfolio</span>
+          </div>
+          <div class="explorer-item" ondblclick="openWindow('win-contact')">
+            <div class="ei-icon"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="28" height="20" rx="2" fill="#5abe5a"/><polygon points="2,6 16,18 30,6" fill="#90d890"/></svg></div><span>Contact</span>
+          </div>
+          <div class="explorer-item" ondblclick="openWindow('win-blog')">
+            <div class="ei-icon"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="1" width="20" height="28" rx="2" fill="#c8d8f0"/><polygon points="18,1 24,1 24,7" fill="#7090c0"/><rect x="7" y="10" width="12" height="2.5" rx="1" fill="#3060a0"/></svg></div><span>Blog</span>
+          </div>
+        </div>
+      </div>
+      <div class="status-bar">
+        <p class="status-bar-field">5 objects</p>
+        <p class="status-bar-field">AmanOS v1.0</p>
+        <p class="status-bar-field">Ready</p>
+      </div>
+    </div>
+    <div class="resize-handle n" data-dir="n"></div><div class="resize-handle s" data-dir="s"></div>
+    <div class="resize-handle e" data-dir="e"></div><div class="resize-handle w" data-dir="w"></div>
+    <div class="resize-handle nw" data-dir="nw"></div><div class="resize-handle ne" data-dir="ne"></div>
+    <div class="resize-handle sw" data-dir="sw"></div><div class="resize-handle se" data-dir="se"></div>
+  </div>
 
-{{-- ====================================================
-     PUSH: FAQ Schema + Product Schema (map.md Part 2.1 / 3.1)
-     ==================================================== --}}
-@push('schema')
-    {{-- FAQ Schema --}}
-    @if ($faqs->isNotEmpty())
-        <script type="application/ld+json">
-{
-  "@@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    @foreach($faqs as $faq)
-    {
-      "@type": "Question",
-      "name": "{{ addslashes($faq->question) }}",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "{{ addslashes(strip_tags($faq->answer)) }}"
-      }
-    }{{ !$loop->last ? ',' : '' }}
-    @endforeach
-  ]
+</div>
+
+<div id="start-menu" class="start-menu" aria-hidden="true">
+  <div class="start-menu-left">
+    <div class="start-user-panel">
+      <div class="start-user-avatar">
+        <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="13" r="9" fill="#4fc3f7"/><path d="M4 40c0-8.837 7.163-16 16-16s16 7.163 16 16" fill="#0288d1"/></svg>
+      </div>
+      <span class="start-user-name">Guest</span>
+    </div>
+    <div class="start-pinned-divider"></div>
+    <ul class="start-app-list">
+      <li class="start-app-item" onclick="launchApp('win-about')">
+        <span class="start-app-icon">👤</span>
+        <span>About Us</span>
+      </li>
+      <li class="start-app-item" onclick="launchApp('win-services')">
+        <span class="start-app-icon">🖥️</span>
+        <span>Services</span>
+      </li>
+      <li class="start-app-item" onclick="launchApp('win-portfolio')">
+        <span class="start-app-icon">💼</span>
+        <span>Portfolio</span>
+      </li>
+      <li class="start-app-item" onclick="launchApp('win-contact')">
+        <span class="start-app-icon">📧</span>
+        <span>Contact Us</span>
+      </li>
+      <li class="start-app-item" onclick="launchApp('win-blog')">
+        <span class="start-app-icon">📝</span>
+        <span>Blog</span>
+      </li>
+      <li class="start-app-item" onclick="launchApp('win-mycomputer')">
+        <span class="start-app-icon">💻</span>
+        <span>My Computer</span>
+      </li>
+    </ul>
+  </div>
+  <div class="start-menu-right">
+    <ul class="start-right-list">
+      <li onclick="launchApp('win-mycomputer')"><span class="sr-icon">💻</span> My Computer</li>
+      <li onclick="launchApp('win-about')"><span class="sr-icon">📄</span> Documents</li>
+      <li class="start-divider"></li>
+      <li onclick="window.location.href='{{ route('admin.login') }}'"><span class="sr-icon">🔧</span> Control Panel</li>
+      <li class="start-divider"></li>
+      <li onclick="confirmShutdown()"><span class="sr-icon">🔴</span> Shut Down</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== TASKBAR ===== -->
+<div id="taskbar" class="taskbar">
+  <button id="start-btn" class="start-button" onclick="toggleStartMenu()" title="Start">
+    <span class="start-orb"></span>
+    <span class="start-label">Start</span>
+  </button>
+
+  <div class="quick-launch" id="quick-launch">
+    <button class="ql-btn" title="About Us" onclick="launchApp('win-about')">
+      <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="6" r="4" fill="#a8d8f8"/><ellipse cx="10" cy="16" rx="7" ry="4" fill="#4a9ad4"/></svg>
+    </button>
+    <button class="ql-btn" title="Services" onclick="launchApp('win-services')">
+      <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="16" height="12" rx="1.5" fill="#5ab0e8"/><rect x="3" y="3" width="14" height="10" rx="1" fill="#d0eaff"/></svg>
+    </button>
+    <button class="ql-btn" title="Portfolio" onclick="launchApp('win-portfolio')">
+      <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect x="7" y="2" width="6" height="4" rx="1.5" fill="#c08020"/><rect x="2" y="5" width="16" height="12" rx="1.5" fill="#f0b830"/></svg>
+    </button>
+    <button class="ql-btn" title="Contact Us" onclick="launchApp('win-contact')">
+      <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="16" height="12" rx="1.5" fill="#5abe5a"/><polygon points="2,4 10,11 18,4" fill="#90d890"/></svg>
+    </button>
+    <button class="ql-btn" title="Blog" onclick="launchApp('win-blog')">
+      <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="1" width="12" height="16" rx="1.5" fill="#c8d8f0"/><polygon points="11,1 15,5 11,5" fill="#7090c0"/></svg>
+    </button>
+    <div class="ql-sep"></div>
+  </div>
+
+  <div id="taskbar-buttons" class="taskbar-buttons"></div>
+
+  <div class="system-tray">
+    <div class="tray-icons">
+      <svg title="Network Connected" viewBox="0 0 16 16" style="width:16px;height:16px;cursor:default;" xmlns="http://www.w3.org/2000/svg"><path d="M2 10 Q8 4 14 10" stroke="#8cf" stroke-width="1.5" fill="none"/><path d="M4 12 Q8 7 12 12" stroke="#8cf" stroke-width="1.5" fill="none"/><circle cx="8" cy="14" r="1.5" fill="#8cf"/></svg>
+      <svg title="Sound" viewBox="0 0 16 16" style="width:16px;height:16px;cursor:default;" xmlns="http://www.w3.org/2000/svg"><polygon points="3,5 7,5 10,2 10,14 7,11 3,11" fill="#8cf"/><path d="M12 5 Q14 8 12 11" stroke="#8cf" stroke-width="1.2" fill="none"/></svg>
+    </div>
+    <div class="tray-clock">
+      <div id="tray-time" class="tray-time">12:00</div>
+      <div id="tray-date" class="tray-date">Mon 1/1</div>
+    </div>
+    <button class="show-desktop-btn" id="show-desktop-btn" title="Show Desktop"></button>
+  </div>
+</div>
+
+<!-- Shutdown / User Switch Dialog -->
+<div id="shutdown-dialog" class="os-window" role="dialog" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:380px;z-index:9999;">
+  <div class="title-bar active">
+    <div class="title-bar-text">Shut Down {{ $settings['site_name'] ?? 'AmanOS' }}</div>
+    <div class="title-bar-controls">
+      <button aria-label="Close" onclick="document.getElementById('shutdown-dialog').style.display='none'"></button>
+    </div>
+  </div>
+  <div class="window-body has-space">
+    <p style="margin-bottom:14px;font-size:12px;color:#333;">What do you want the computer to do?</p>
+
+    {{-- User tiles — switch user options --}}
+    <div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px;">
+
+      {{-- Guest tile --}}
+      <button onclick="switchToGuest()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 16px;background:rgba(255,255,255,0.5);border:1px solid rgba(0,0,0,0.15);border-radius:6px;cursor:pointer;width:100px;transition:background 0.15s;" onmouseover="this.style.background='rgba(60,127,177,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.5)'">
+        <div style="width:48px;height:48px;border-radius:50%;background:rgba(100,150,200,0.2);border:1px solid rgba(100,150,200,0.4);display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 40 40" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="18" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+            <circle cx="20" cy="15" r="8" fill="rgba(255,255,255,0.5)"/>
+            <ellipse cx="20" cy="33" rx="13" ry="9" fill="rgba(255,255,255,0.4)"/>
+          </svg>
+        </div>
+        <span style="font-size:11px;font-family:'Segoe UI',sans-serif;color:#1a3050;font-weight:600;">Guest</span>
+        <span style="font-size:10px;color:#667;font-family:'Segoe UI',sans-serif;">Browse as guest</span>
+      </button>
+
+      {{-- Admin tile --}}
+      <button onclick="switchToAdmin()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 16px;background:rgba(255,255,255,0.5);border:1px solid rgba(0,0,0,0.15);border-radius:6px;cursor:pointer;width:100px;transition:background 0.15s;" onmouseover="this.style.background='rgba(60,127,177,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.5)'">
+        <div style="width:48px;height:48px;border-radius:50%;overflow:hidden;border:2px solid rgba(90,180,240,0.6);background:linear-gradient(135deg,#1a4a80,#0d2444);">
+          <svg viewBox="0 0 64 64" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="sd-av1" cx="40%" cy="30%" r="65%"><stop offset="0%" stop-color="#fde8c8"/><stop offset="100%" stop-color="#d4956a"/></radialGradient>
+              <linearGradient id="sd-av2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5ab4f0"/><stop offset="100%" stop-color="#1565c0"/></linearGradient>
+            </defs>
+            <ellipse cx="32" cy="56" rx="22" ry="12" fill="url(#sd-av2)"/>
+            <rect x="27" y="33" width="10" height="9" rx="4" fill="url(#sd-av1)"/>
+            <circle cx="32" cy="27" r="14" fill="url(#sd-av1)"/>
+            <ellipse cx="32" cy="15" rx="14" ry="7" fill="#5a3010"/>
+          </svg>
+        </div>
+        <span style="font-size:11px;font-family:'Segoe UI',sans-serif;color:#1a3050;font-weight:600;">Admin</span>
+        <span style="font-size:10px;color:#667;font-family:'Segoe UI',sans-serif;">Aman Login</span>
+      </button>
+
+    </div>
+
+    <div style="border-top:1px solid rgba(0,0,0,0.1);padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:11px;color:#666;">Or:</span>
+      <div style="display:flex;gap:6px;">
+        <button onclick="doShutdown()">&#x1F534; Shut Down</button>
+        <button onclick="document.getElementById('shutdown-dialog').style.display='none'">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="shutdown-screen" style="display:none;position:fixed;inset:0;background:#000;z-index:99999;">
+  <div style="color:#fff;font-size:18pt;font-family:'Segoe UI',sans-serif;margin-bottom:16px;">Shutting down...</div>
+</div>
+
+<!-- Right-click Context Menu -->
+<div id="ctx-menu" class="ctx-menu">
+  <div class="ctx-item" onclick="sortDesktopIcons()">Sort Icons by Name</div>
+  <div class="ctx-item" onclick="refreshDesktop()">Refresh</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="openWallpaperPicker()">Personalize / Wallpaper…</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="launchApp('win-mycomputer')">My Computer</div>
+</div>
+
+<!-- Wallpaper Picker Panel -->
+<div id="wp-picker" class="wp-picker">
+  <div class="wp-picker-title">
+    <span>Choose Wallpaper</span>
+    <button onclick="document.getElementById('wp-picker').classList.remove('open')">✕</button>
+  </div>
+  <div class="wp-grid">
+    <div class="wp-swatch wp-aurora-swatch" data-wp="wp-aurora" onclick="setWallpaper('wp-aurora',this)" title="Aurora"><span>Aurora</span></div>
+    <div class="wp-swatch wp-bliss-swatch"  data-wp="wp-bliss"  onclick="setWallpaper('wp-bliss',this)"  title="Bliss"><span>Bliss</span></div>
+    <div class="wp-swatch wp-dusk-swatch"   data-wp="wp-dusk"   onclick="setWallpaper('wp-dusk',this)"   title="Dusk"><span>Dusk</span></div>
+    <div class="wp-swatch wp-night-swatch"  data-wp="wp-night"  onclick="setWallpaper('wp-night',this)"  title="Night"><span>Night</span></div>
+    <div class="wp-swatch wp-forest-swatch" data-wp="wp-forest" onclick="setWallpaper('wp-forest',this)" title="Forest"><span>Forest</span></div>
+    <div class="wp-swatch wp-energy-swatch" data-wp="wp-energy" onclick="setWallpaper('wp-energy',this)" title="Energy"><span>Energy</span></div>
+  </div>
+</div>
+
+<script src="{{ asset('amanos/js/ui.js') }}"></script>
+<script>
+function handleContactFormSubmit(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    fetch("{{ route('contact.submit') }}", {
+        method: "POST",
+        headers: {
+            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+            "Accept": "application/json"
+        },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            form.reset();
+            document.getElementById('contact-success').style.display = 'block';
+            document.getElementById('contact-success').innerText = '✅ ' + data.message;
+        }
+    })
+    .catch(err => {
+        form.submit();
+    });
+}
+
+/** Shutdown dialog: switch to Guest mode — close dialog and enter guest desktop */
+function switchToGuest() {
+  document.getElementById('shutdown-dialog').style.display = 'none';
+  // If still on login screen, just enter the desktop as guest
+  const desktop = document.getElementById('desktop');
+  if (desktop) {
+    const loginScreen = document.getElementById('login-screen');
+    if (loginScreen && !loginScreen.classList.contains('hidden')) {
+      // Animate welcome for guest then enter desktop
+      showWelcome('guest', 'Guest');
+    }
+    // Already on desktop — nothing to do
+  }
+}
+
+/** Shutdown dialog: switch to Admin — navigate to the Laravel admin login page */
+function switchToAdmin() {
+  document.getElementById('shutdown-dialog').style.display = 'none';
+  window.location.href = '{{ route('admin.login') }}';
 }
 </script>
-    @endif
-
-    {{-- SoftwareApplication Schema for Products --}}
-    @if ($products->isNotEmpty())
-        <script type="application/ld+json">
-[
-@foreach($products as $product)
-{
-  "@@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "{{ $product->name }}",
-  "description": "{{ addslashes($product->tagline ?? $product->short_description ?? '') }}",
-  "applicationCategory": "BusinessApplication",
-  "operatingSystem": "Web Browser",
-  "offers": {
-    "@type": "Offer",
-    "price": "{{ $product->price ?? '0' }}",
-    "priceCurrency": "INR",
-    "availability": "https://schema.org/InStock"
-  },
-  "provider": {
-    "@id": "https://amanprojects.com/#organization"
-  }
-  @if(isset($product->demo_url) && $product->demo_url)
-  ,"url": "{{ $product->demo_url }}"
-  @endif
-}{{ !$loop->last ? ',' : '' }}
-@endforeach
-]
-</script>
-    @endif
-@endpush
-
-@push('styles')
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <style>
-        .card-swiper { width: 100%; height: 250px; }
-        .card-swiper .swiper-button-next, .card-swiper .swiper-button-prev { color: var(--primary); transform: scale(0.6); }
-        .card-swiper .swiper-pagination-bullet-active { background: var(--primary); }
-    </style>
-@endpush
-
-@push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Hero Swiper
-            if (document.querySelector('.hero-swiper')) {
-                new Swiper('.hero-swiper', {
-                    loop: true,
-                    autoplay: { delay: 4000, disableOnInteraction: false },
-                    pagination: { el: '.swiper-pagination', clickable: true },
-                    navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }
-                });
-            }
-            // Testimonials Swiper
-            if (document.querySelector('.testimonials-swiper')) {
-                new Swiper('.testimonials-swiper', {
-                    loop: true,
-                    autoplay: { delay: 5000, disableOnInteraction: false },
-                    pagination: { el: '.swiper-pagination', clickable: true },
-                    breakpoints: { 640: { slidesPerView: 1 }, 768: { slidesPerView: 2, spaceBetween: 20 }, 1024: { slidesPerView: 3, spaceBetween: 30 } }
-                });
-            }
-            // Card Swipers (Products & Projects)
-            const cardSwipers = document.querySelectorAll('.card-swiper');
-            cardSwipers.forEach(function(swiperEl) {
-                new Swiper(swiperEl, {
-                    loop: true,
-                    pagination: { el: swiperEl.querySelector('.swiper-pagination'), clickable: true },
-                    navigation: { nextEl: swiperEl.querySelector('.swiper-button-next'), prevEl: swiperEl.querySelector('.swiper-button-prev') }
-                });
-            });
-        });
-    </script>
-@endpush
+</body>
+</html>

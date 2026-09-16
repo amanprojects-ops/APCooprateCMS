@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -11,23 +12,23 @@ class DatabaseSeeder extends Seeder
     {
         // Default admin seeder
         $roleId = DB::table('roles')->insertGetId([
-            'name'         => 'admin',
+            'name' => 'admin',
             'display_name' => 'Administrator',
-            'description'  => 'Full access to all modules',
-            'created_at'   => now(),
-            'updated_at'   => now(),
+            'description' => 'Full access to all modules',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         DB::table('users')->insert([
-            'name'      => 'Aman',
-            'username'  => 'admin',
-            'email'     => 'admin@amanprojects.com',
-            'mobile'    => '9876543210',
-            'role_id'   => $roleId,
-            'password'  => \Illuminate\Support\Facades\Hash::make('password'),
+            'name' => 'Aman',
+            'username' => 'admin',
+            'email' => 'admin@amanprojects.com',
+            'mobile' => '9876543210',
+            'role_id' => $roleId,
+            'password' => Hash::make('password'),
             'is_active' => true,
-            'created_at'=> now(),
-            'updated_at'=> now(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         // ─────────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ class DatabaseSeeder extends Seeder
             ['key' => 'address',           'value' => 'India',                                  'type' => 'textarea', 'group' => 'general'],
             ['key' => 'logo',              'value' => null,                                     'type' => 'image',    'group' => 'general'],
             ['key' => 'favicon',           'value' => null,                                     'type' => 'image',    'group' => 'general'],
-            
+
             // About settings
             ['key' => 'about_title',         'value' => 'Who We Are',                            'type' => 'text',     'group' => 'about'],
             ['key' => 'about_subtitle',      'value' => 'Founded in 2021, AmanProjects was built with a single mission: to deliver enterprise-grade software at startup costs to Indian businesses.', 'type' => 'textarea', 'group' => 'about'],
@@ -111,192 +112,6 @@ class DatabaseSeeder extends Seeder
                     'created_at' => now(),
                     'updated_at' => now(),
                 ])
-            );
-        }
-
-        // ─────────────────────────────────────────────────────────
-        // 2. STATS
-        // ─────────────────────────────────────────────────────────
-        $stats = [
-            ['label' => 'Projects Delivered', 'value' => 20,  'suffix' => '+',  'icon' => 'heroicon-o-briefcase',      'sort_order' => 1],
-            ['label' => 'Happy Clients',       'value' => 15,  'suffix' => '+',  'icon' => 'heroicon-o-users',          'sort_order' => 2],
-            ['label' => 'Years Experience',    'value' => 3,   'suffix' => '+',  'icon' => 'heroicon-o-calendar-days',  'sort_order' => 3],
-            ['label' => 'Technologies Used',   'value' => 10,  'suffix' => '+',  'icon' => 'heroicon-o-code-bracket',   'sort_order' => 4],
-        ];
-
-        foreach ($stats as $stat) {
-            DB::table('stats')->updateOrInsert(
-                ['label' => $stat['label']],
-                array_merge($stat, [
-                    'is_active'  => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])
-            );
-        }
-
-        // ─────────────────────────────────────────────────────────
-        // 3. TECH STACKS
-        // ─────────────────────────────────────────────────────────
-        $techs = [
-            ['name' => 'Laravel',     'category' => 'Backend',  'sort_order' => 1],
-            ['name' => 'PHP',         'category' => 'Backend',  'sort_order' => 2],
-            ['name' => 'MySQL',       'category' => 'Database', 'sort_order' => 3],
-            ['name' => 'Tailwind CSS', 'category' => 'Frontend', 'sort_order' => 4],
-            ['name' => 'Alpine.js',   'category' => 'Frontend', 'sort_order' => 5],
-            ['name' => 'JavaScript',  'category' => 'Frontend', 'sort_order' => 6],
-            ['name' => 'jQuery',      'category' => 'Frontend', 'sort_order' => 7],
-            ['name' => 'Git',         'category' => 'Tools',    'sort_order' => 8],
-            ['name' => 'Linux',       'category' => 'Tools',    'sort_order' => 9],
-            ['name' => 'REST API',    'category' => 'Backend',  'sort_order' => 10],
-        ];
-
-        foreach ($techs as $tech) {
-            DB::table('tech_stacks')->updateOrInsert(
-                ['name' => $tech['name']],
-                array_merge($tech, [
-                    'logo'       => null,
-                    'is_active'  => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])
-            );
-        }
-
-        // ─────────────────────────────────────────────────────────
-        // 4. PRICING PLANS + FEATURES
-        // ─────────────────────────────────────────────────────────
-        $plans = [
-            [
-                'plan' => [
-                    'name'          => 'Basic',
-                    'slug'          => 'basic',
-                    'tagline'       => 'Perfect for small projects & startups',
-                    'price'         => 49.00,
-                    'billing_cycle' => 'monthly',
-                    'is_featured'   => false,
-                    'is_active'     => true,
-                    'badge_text'    => null,
-                    'cta_text'      => 'Get Started',
-                    'cta_url'       => '/contact',
-                    'sort_order'    => 1,
-                ],
-                'features' => [
-                    ['feature_text' => '1 Website / Project',          'is_included' => true,  'sort_order' => 1],
-                    ['feature_text' => 'Up to 5 Pages',                'is_included' => true,  'sort_order' => 2],
-                    ['feature_text' => 'Basic Admin Panel',            'is_included' => true,  'sort_order' => 3],
-                    ['feature_text' => 'Email Support',                'is_included' => true,  'sort_order' => 4],
-                    ['feature_text' => 'API Integration',              'is_included' => false, 'sort_order' => 5],
-                    ['feature_text' => 'Priority Support',             'is_included' => false, 'sort_order' => 6],
-                    ['feature_text' => 'Custom Feature Development',   'is_included' => false, 'sort_order' => 7],
-                ],
-            ],
-            [
-                'plan' => [
-                    'name'          => 'Standard',
-                    'slug'          => 'standard',
-                    'tagline'       => 'Great for growing businesses',
-                    'price'         => 99.00,
-                    'billing_cycle' => 'monthly',
-                    'is_featured'   => true,
-                    'is_active'     => true,
-                    'badge_text'    => 'Most Popular',
-                    'cta_text'      => 'Get Started',
-                    'cta_url'       => '/contact',
-                    'sort_order'    => 2,
-                ],
-                'features' => [
-                    ['feature_text' => 'Up to 3 Projects',             'is_included' => true,  'sort_order' => 1],
-                    ['feature_text' => 'Unlimited Pages',              'is_included' => true,  'sort_order' => 2],
-                    ['feature_text' => 'Advanced Admin Panel',         'is_included' => true,  'sort_order' => 3],
-                    ['feature_text' => 'Email + WhatsApp Support',     'is_included' => true,  'sort_order' => 4],
-                    ['feature_text' => 'API Integration',              'is_included' => true,  'sort_order' => 5],
-                    ['feature_text' => 'Priority Support',             'is_included' => false, 'sort_order' => 6],
-                    ['feature_text' => 'Custom Feature Development',   'is_included' => false, 'sort_order' => 7],
-                ],
-            ],
-            [
-                'plan' => [
-                    'name'          => 'Pro',
-                    'slug'          => 'pro',
-                    'tagline'       => 'Full-power for enterprise & agencies',
-                    'price'         => 199.00,
-                    'billing_cycle' => 'monthly',
-                    'is_featured'   => false,
-                    'is_active'     => true,
-                    'badge_text'    => null,
-                    'cta_text'      => 'Contact Us',
-                    'cta_url'       => '/contact',
-                    'sort_order'    => 3,
-                ],
-                'features' => [
-                    ['feature_text' => 'Unlimited Projects',           'is_included' => true, 'sort_order' => 1],
-                    ['feature_text' => 'Unlimited Pages',              'is_included' => true, 'sort_order' => 2],
-                    ['feature_text' => 'Full Admin Panel (Filament)',  'is_included' => true, 'sort_order' => 3],
-                    ['feature_text' => '24/7 Priority Support',        'is_included' => true, 'sort_order' => 4],
-                    ['feature_text' => 'API Integration',              'is_included' => true, 'sort_order' => 5],
-                    ['feature_text' => 'Priority Support',             'is_included' => true, 'sort_order' => 6],
-                    ['feature_text' => 'Custom Feature Development',   'is_included' => true, 'sort_order' => 7],
-                ],
-            ],
-        ];
-
-        foreach ($plans as $item) {
-            $planId = DB::table('pricing_plans')->updateOrInsert(
-                ['slug' => $item['plan']['slug']],
-                array_merge($item['plan'], [
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])
-            );
-
-            // Fetch the plan ID after upsert
-            $plan = DB::table('pricing_plans')->where('slug', $item['plan']['slug'])->first();
-
-            // Delete existing features to avoid duplicates on re-seed
-            DB::table('pricing_features')->where('pricing_plan_id', $plan->id)->delete();
-
-            foreach ($item['features'] as $feature) {
-                DB::table('pricing_features')->insert(array_merge($feature, [
-                    'pricing_plan_id' => $plan->id,
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
-                ]));
-            }
-        }
-
-        // ─────────────────────────────────────────────────────────
-        // 5. FEATURES
-        // ─────────────────────────────────────────────────────────
-        $features = [
-            ['title' => 'Fast Delivery', 'description' => 'Production-ready Laravel applications — fast, no bloat, no delays.', 'icon' => '<i class="fas fa-bolt" aria-hidden="true"></i>', 'sort_order' => 1],
-            ['title' => 'Security-First Approach', 'description' => 'Built by an ethical hacker who knows exactly what attackers look for.', 'icon' => '<i class="fas fa-shield-alt" aria-hidden="true"></i>', 'sort_order' => 2],
-            ['title' => 'Custom SaaS Products', 'description' => 'Multi-tenant SaaS platforms for coaching centres, libraries, fintech, and more.', 'icon' => '<i class="fas fa-cubes" aria-hidden="true"></i>', 'sort_order' => 3],
-            ['title' => 'REST API Integration', 'description' => 'Robust API development — payment gateways, SMS, third-party integrations.', 'icon' => '<i class="fas fa-plug" aria-hidden="true"></i>', 'sort_order' => 4],
-            ['title' => 'Ethical Hacking & VAPT', 'description' => 'Certified pen testing using Burp Suite, Nmap, Metasploit — find bugs before hackers do.', 'icon' => '<i class="fas fa-user-secret" aria-hidden="true"></i>', 'sort_order' => 5],
-            ['title' => 'Dedicated Support', 'description' => 'Direct communication with the developer — no middlemen, always available.', 'icon' => '<i class="fas fa-headset" aria-hidden="true"></i>', 'sort_order' => 6],
-        ];
-
-        foreach ($features as $feature) {
-            DB::table('features')->updateOrInsert(
-                ['title' => $feature['title']],
-                array_merge($feature, ['created_at' => now(), 'updated_at' => now()])
-            );
-        }
-
-        // ─────────────────────────────────────────────────────────
-        // 6. PROCESS STEPS
-        // ─────────────────────────────────────────────────────────
-        $steps = [
-            ['step_number' => '01', 'title' => 'Discovery & Planning', 'description' => 'Share requirements. We analyse, plan architecture, and define scope with transparent pricing.', 'sort_order' => 1],
-            ['step_number' => '02', 'title' => 'Development & Security', 'description' => 'We build using Laravel 12 best practices with security checks at every stage.', 'sort_order' => 2],
-            ['step_number' => '03', 'title' => 'Launch & Support', 'description' => 'We deploy, configure your server, and provide ongoing maintenance as your product grows.', 'sort_order' => 3],
-        ];
-
-        foreach ($steps as $step) {
-            DB::table('process_steps')->updateOrInsert(
-                ['title' => $step['title']],
-                array_merge($step, ['created_at' => now(), 'updated_at' => now()])
             );
         }
     }

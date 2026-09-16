@@ -13,13 +13,14 @@ class LoginController extends Controller
         if (Auth::check()) {
             return redirect()->route('admin.dashboard');
         }
-        return view('admin.features.auth.login');
+
+        return view('admin.auth.login');
     }
 
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required|min:6',
         ]);
 
@@ -27,8 +28,9 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
+
             return redirect()->intended(route('admin.dashboard'))
-                ->with('success', 'Welcome back, ' . Auth::user()->name . '!');
+                ->with('success', 'Welcome back, '.Auth::user()->name.'!');
         }
 
         return back()
@@ -41,18 +43,19 @@ class LoginController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('admin.login')->with('success', 'You have been logged out.');
     }
 
     public function showForgotPassword()
     {
-        return view('admin.features.auth.forgot-password');
+        return view('admin.auth.forgot-password');
     }
 
     public function sendResetLink(Request $request)
     {
         $request->validate(['email' => 'required|email']);
-        // In production, integrate Laravel's password reset broker here.
+
         return back()->with('info', 'If an account exists for that email, a reset link has been sent.');
     }
 }

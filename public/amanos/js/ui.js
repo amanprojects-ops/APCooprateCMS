@@ -1,0 +1,859 @@
+/**
+ * AmanOS - Windows 7 Style Web OS
+ * ui.js - Full window manager, taskbar, start menu, desktop icons
+ */
+
+'use strict';
+
+// =========================================================
+//  GLOBAL STATE
+// =========================================================
+
+const APP_META = {
+  'win-about':       { title: 'About Us',     icon: '👤' },
+  'win-services':    { title: 'Services',      icon: '🖥️' },
+  'win-portfolio':   { title: 'Portfolio',     icon: '💼' },
+  'win-contact':     { title: 'Contact Us',    icon: '📧' },
+  'win-blog':        { title: 'Blog',          icon: '📝' },
+  'win-mycomputer':  { title: 'My Computer',   icon: '💻' },
+};
+
+let zCounter = 50;           // z-index counter
+let activeWindowId = null;   // currently focused window id
+
+// =========================================================
+//  UTILITY
+// =========================================================
+
+function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+function getWin(id) { return document.getElementById(id); }
+
+// =========================================================
+//  WINDOW FOCUS / Z-INDEX
+// =========================================================
+
+function bringToFront(win) {
+  zCounter++;
+  win.style.zIndex = zCounter;
+  // mark active — only among real app windows (not dialogs)
+  document.querySelectorAll('.os-window:not([role="dialog"])').forEach(w => w.classList.remove('active'));
+  win.classList.add('active');
+  activeWindowId = win.id;
+  updateTaskbarButtons();
+}
+
+function closeActiveWindow() {
+  if (activeWindowId) closeWindow(activeWindowId);
+}
+
+// =========================================================
+//  OPEN / CLOSE / MINIMISE / MAXIMISE
+// =========================================================
+
+function openWindow(id) {
+  const win = getWin(id);
+  if (!win) return;
+  win.classList.remove('closed', 'minimized');
+  bringToFront(win);
+  closeStartMenu();
+  updateTaskbarButtons();
+}
+
+function closeWindow(id) {
+  const win = getWin(id);
+  if (!win) return;
+  win.classList.add('closed');
+  if (activeWindowId === id) activeWindowId = null;
+  updateTaskbarButtons();
+}
+
+function minimizeWindow(id) {
+  const win = getWin(id);
+  if (!win) return;
+  win.classList.add('minimized');
+  win.classList.remove('active');
+  if (activeWindowId === id) activeWindowId = null;
+  updateTaskbarButtons();
+}
+
+function toggleMinimize(id) {
+  const win = getWin(id);
+  if (!win || win.classList.contains('closed')) {
+    openWindow(id);
+    return;
+  }
+  if (win.classList.contains('minimized')) {
+    openWindow(id);
+  } else if (activeWindowId === id) {
+    minimizeWindow(id);
+  } else {
+    bringToFront(win);
+  }
+}
+
+const restoreRects = {};
+
+function maximizeWindow(id) {
+  const win = getWin(id);
+  if (!win) return;
+  if (win.classList.contains('maximized')) {
+    // restore
+    const r = restoreRects[id];
+    if (r) {
+      win.classList.remove('maximized');
+      win.style.left   = r.left;
+      win.style.top    = r.top;
+      win.style.width  = r.width;
+      win.style.height = r.height;
+    }
+  } else {
+    const rect = win.getBoundingClientRect();
+    restoreRects[id] = {
+      left:   win.style.left   || rect.left + 'px',
+      top:    win.style.top    || rect.top  + 'px',
+      width:  win.style.width  || rect.width + 'px',
+      height: win.style.height || '',
+    };
+    win.classList.add('maximized');
+  }
+  bringToFront(win);
+}
+
+// =========================================================
+//  DRAG
+// =========================================================
+
+function makeDraggable(win) {
+  const titleBar = win.querySelector('.title-bar');
+  if (!titleBar) return;
+
+  let dragging = false, pid = null;
+  let sx = 0, sy = 0, sl = 0, st = 0;
+
+  titleBar.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    if (e.target.closest('.title-bar-controls')) return;
+    if (win.classList.contains('maximized')) return;
+
+    bringToFront(win);
+    dragging = true;
+    pid = e.pointerId;
+    win.classList.add('dragging');
+    titleBar.setPointerCapture(pid);
+
+    const rect = win.getBoundingClientRect();
+    sx = e.clientX; sy = e.clientY;
+    sl = rect.left; st = rect.top;
+    win.style.left = rect.left + 'px';
+    win.style.top  = rect.top  + 'px';
+    e.preventDefault();
+  });
+
+  titleBar.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - sx;
+    const dy = e.clientY - sy;
+    const deskH = window.innerHeight - 40;
+    const maxL = window.innerWidth  - win.offsetWidth;
+    const maxT = deskH - win.offsetHeight;
+    win.style.left = clamp(sl + dx, 0, Math.max(0, maxL)) + 'px';
+    win.style.top  = clamp(st + dy, 0, Math.max(0, maxT)) + 'px';
+  });
+
+  const stopDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    win.classList.remove('dragging');
+    try { titleBar.releasePointerCapture(pid); } catch(_) {}
+    pid = null;
+  };
+
+  titleBar.addEventListener('pointerup', stopDrag);
+  titleBar.addEventListener('pointercancel', stopDrag);
+
+  // double-click title bar = toggle maximize
+  titleBar.addEventListener('dblclick', e => {
+    if (e.target.closest('.title-bar-controls')) return;
+    maximizeWindow(win.id);
+  });
+}
+
+// =========================================================
+//  RESIZE
+// =========================================================
+
+function makeResizable(win) {
+  const MIN_W = 260, MIN_H = 140;
+
+  win.querySelectorAll('.resize-handle').forEach(handle => {
+    let resizing = false, pid = null;
+    let dir = '', sx = 0, sy = 0, sl = 0, st = 0, sw = 0, sh = 0;
+
+    handle.addEventListener('pointerdown', e => {
+      if (win.classList.contains('maximized')) return;
+      resizing = true;
+      dir = handle.dataset.dir;
+      pid = e.pointerId;
+      handle.setPointerCapture(pid);
+
+      const rect = win.getBoundingClientRect();
+      sx = e.clientX; sy = e.clientY;
+      sl = rect.left; st = rect.top;
+      sw = rect.width; sh = rect.height;
+      win.style.left   = sl + 'px';
+      win.style.top    = st + 'px';
+      win.style.width  = sw + 'px';
+      win.style.height = sh + 'px';
+      e.preventDefault(); e.stopPropagation();
+    });
+
+    handle.addEventListener('pointermove', e => {
+      if (!resizing) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      let nl = sl, nt = st, nw = sw, nh = sh;
+
+      if (dir.includes('e')) nw = sw + dx;
+      if (dir.includes('w')) { nw = sw - dx; nl = sl + dx; }
+      if (dir.includes('s')) nh = sh + dy;
+      if (dir.includes('n')) { nh = sh - dy; nt = st + dy; }
+
+      if (nw < MIN_W) { if (dir.includes('w')) nl -= (MIN_W - nw); nw = MIN_W; }
+      if (nh < MIN_H) { if (dir.includes('n')) nt -= (MIN_H - nh); nh = MIN_H; }
+
+      const deskH = window.innerHeight - 40;
+      nl = clamp(nl, 0, Math.max(0, window.innerWidth - nw));
+      nt = clamp(nt, 0, Math.max(0, deskH - nh));
+
+      win.style.left   = nl + 'px';
+      win.style.top    = nt + 'px';
+      win.style.width  = nw + 'px';
+      win.style.height = nh + 'px';
+    });
+
+    const stop = () => {
+      if (!resizing) return;
+      resizing = false;
+      try { handle.releasePointerCapture(pid); } catch(_) {}
+      pid = null;
+    };
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+  });
+}
+
+// =========================================================
+//  TITLE BAR CONTROL BUTTONS
+// =========================================================
+
+function wireButtons(win) {
+  const controls = win.querySelector('.title-bar-controls');
+  if (!controls) return;
+
+  const [minBtn, maxBtn, closeBtn] = controls.querySelectorAll('button');
+
+  if (minBtn)   minBtn.addEventListener('click',   e => { e.stopPropagation(); minimizeWindow(win.id); });
+  if (maxBtn)   maxBtn.addEventListener('click',   e => { e.stopPropagation(); maximizeWindow(win.id); });
+  if (closeBtn) closeBtn.addEventListener('click', e => { e.stopPropagation(); closeWindow(win.id); });
+}
+
+// =========================================================
+//  TASKBAR BUTTONS
+// =========================================================
+
+function updateTaskbarButtons() {
+  const container = document.getElementById('taskbar-buttons');
+  if (!container) return;
+  container.innerHTML = '';
+
+  document.querySelectorAll('.os-window:not([role="dialog"])').forEach(win => {
+    if (!win.id || win.classList.contains('closed')) return;
+    const meta = APP_META[win.id] || { title: win.id, icon: '🪟' };
+
+    const btn = document.createElement('button');
+    btn.className = 'tb-btn';
+    if (win.id === activeWindowId) btn.classList.add('tb-active');
+    if (win.classList.contains('minimized')) btn.classList.add('tb-minimized');
+
+    btn.innerHTML = `<span class="tb-btn-icon">${meta.icon}</span><span class="tb-btn-label">${meta.title}</span>`;
+    btn.title = meta.title;
+    btn.addEventListener('click', () => toggleMinimize(win.id));
+    container.appendChild(btn);
+  });
+}
+
+// =========================================================
+//  DESKTOP ICONS
+// =========================================================
+
+function setupDesktopIcons() {
+  let selectedIcon = null;
+
+  document.querySelectorAll('.desktop-icon').forEach(icon => {
+    const winId = icon.dataset.window;
+
+    icon.addEventListener('click', e => {
+      e.stopPropagation();
+      if (selectedIcon) selectedIcon.classList.remove('selected');
+      icon.classList.add('selected');
+      selectedIcon = icon;
+    });
+
+    icon.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      if (winId) openWindow(winId);
+    });
+
+    icon.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && winId) {
+        e.preventDefault();
+        openWindow(winId);
+      }
+    });
+  });
+
+  document.getElementById('desktop').addEventListener('click', () => {
+    if (selectedIcon) { selectedIcon.classList.remove('selected'); selectedIcon = null; }
+    closeStartMenu();
+  });
+}
+
+// =========================================================
+//  START MENU
+// =========================================================
+
+function toggleStartMenu() {
+  const menu = document.getElementById('start-menu');
+  const btn  = document.getElementById('start-btn');
+  const isOpen = menu.classList.contains('open');
+  if (isOpen) {
+    menu.classList.remove('open');
+    menu.setAttribute('aria-hidden', 'true');
+    btn.classList.remove('active');
+  } else {
+    menu.classList.add('open');
+    menu.setAttribute('aria-hidden', 'false');
+    btn.classList.add('active');
+  }
+}
+
+function closeStartMenu() {
+  const menu = document.getElementById('start-menu');
+  const btn  = document.getElementById('start-btn');
+  menu.classList.remove('open');
+  menu.setAttribute('aria-hidden', 'true');
+  btn.classList.remove('active');
+}
+
+function launchApp(id) {
+  closeStartMenu();
+  openWindow(id);
+}
+
+// =========================================================
+//  CLOCK
+// =========================================================
+
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const day  = days[now.getDay()];
+  const date = `${day} ${now.getMonth() + 1}/${now.getDate()}`;
+
+  const timeEl = document.getElementById('tray-time');
+  const dateEl = document.getElementById('tray-date');
+  if (timeEl) timeEl.textContent = `${h}:${m}`;
+  if (dateEl) dateEl.textContent = date;
+}
+
+// =========================================================
+//  SHOW DESKTOP
+// =========================================================
+
+let allMinimized = false;
+
+function setupShowDesktop() {
+  const btn = document.getElementById('show-desktop-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const windows = document.querySelectorAll('.os-window:not(.closed)');
+    if (!allMinimized) {
+      windows.forEach(w => { if (!w.classList.contains('minimized')) w.classList.add('minimized'); });
+      allMinimized = true;
+    } else {
+      windows.forEach(w => w.classList.remove('minimized'));
+      allMinimized = false;
+    }
+    updateTaskbarButtons();
+  });
+}
+
+// =========================================================
+//  WINDOW CLICK-TO-FOCUS
+// =========================================================
+
+function setupWindowFocus() {
+  document.querySelectorAll('.os-window:not([role="dialog"])').forEach(win => {
+    win.addEventListener('mousedown', () => {
+      if (!win.classList.contains('minimized') && !win.classList.contains('closed')) {
+        bringToFront(win);
+      }
+    });
+  });
+}
+
+// =========================================================
+//  TABS (generic for any tablist in a window)
+// =========================================================
+
+function setupTabs(container) {
+  const tabLists = container.querySelectorAll('menu[role="tablist"]');
+  tabLists.forEach(tabList => {
+    const buttons = Array.from(tabList.querySelectorAll('button[role="tab"]'));
+    const panels  = buttons.map(b => document.getElementById(b.getAttribute('aria-controls'))).filter(Boolean);
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('aria-controls');
+        buttons.forEach(b => b.setAttribute('aria-selected', String(b === btn)));
+        panels.forEach(p => { if (p.id === target) p.removeAttribute('hidden'); else p.setAttribute('hidden', ''); });
+      });
+    });
+  });
+}
+
+// =========================================================
+//  CONTACT FORM
+// =========================================================
+
+function handleContact(e) {
+  e.preventDefault();
+  document.getElementById('contactForm').style.display = 'none';
+  document.getElementById('contact-success').style.display = 'block';
+}
+
+// =========================================================
+//  SHUTDOWN
+// =========================================================
+
+function confirmShutdown() {
+  closeStartMenu();
+  document.getElementById('shutdown-dialog').style.display = 'block';
+}
+
+function doShutdown() {
+  document.getElementById('shutdown-dialog').style.display = 'none';
+  const screen = document.getElementById('shutdown-screen');
+  screen.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;position:fixed;inset:0;background:#000;z-index:99999;';
+  setTimeout(() => {
+    screen.innerHTML = '<div style="color:#fff;font-size:14pt;font-family:Segoe UI,sans-serif;">It is now safe to close the browser tab.</div>';
+  }, 2500);
+}
+
+// =========================================================
+//  KEEP WINDOWS IN BOUNDS ON RESIZE
+// =========================================================
+
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.os-window:not(.closed):not(.maximized)').forEach(win => {
+    const rect = win.getBoundingClientRect();
+    const deskH = window.innerHeight - 40;
+    const maxL  = window.innerWidth  - rect.width;
+    const maxT  = deskH - rect.height;
+    win.style.left = clamp(rect.left, 0, Math.max(0, maxL)) + 'px';
+    win.style.top  = clamp(rect.top,  0, Math.max(0, maxT)) + 'px';
+  });
+});
+
+// =========================================================
+//  LOGIN / BOOT SCREEN
+// =========================================================
+
+// Admin credentials are validated server-side via /admin/login
+// (kept for fallback reference only, not used for actual auth)
+const LOGIN_CREDENTIALS = {
+  username: 'aman',
+};
+
+// Avatar SVG content shared between password panel & welcome screen
+const AVATARS = {
+  aman: `<defs>
+    <radialGradient id="wa1" cx="40%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#fde8c8"/>
+      <stop offset="100%" stop-color="#d4956a"/>
+    </radialGradient>
+    <linearGradient id="wa2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5ab4f0"/>
+      <stop offset="100%" stop-color="#1565c0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="56" rx="22" ry="12" fill="url(#wa2)"/>
+  <ellipse cx="32" cy="48" rx="17" ry="10" fill="url(#wa2)"/>
+  <rect x="27" y="33" width="10" height="9" rx="4" fill="url(#wa1)"/>
+  <circle cx="32" cy="27" r="14" fill="url(#wa1)"/>
+  <ellipse cx="32" cy="15" rx="14" ry="7" fill="#5a3010"/>
+  <ellipse cx="19" cy="22" rx="5" ry="9" fill="#5a3010"/>
+  <ellipse cx="45" cy="22" rx="5" ry="9" fill="#5a3010"/>
+  <ellipse cx="27" cy="27" rx="2.2" ry="2.5" fill="#3a2010"/>
+  <ellipse cx="37" cy="27" rx="2.2" ry="2.5" fill="#3a2010"/>
+  <circle cx="28" cy="26" r="0.8" fill="#fff"/>
+  <circle cx="38" cy="26" r="0.8" fill="#fff"/>
+  <path d="M27 31 Q32 35 37 31" stroke="#b07050" stroke-width="1.5" fill="none" stroke-linecap="round"/>`,
+
+  guest: `<circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+  <circle cx="32" cy="24" r="12" fill="rgba(255,255,255,0.5)"/>
+  <ellipse cx="32" cy="52" rx="19" ry="12" fill="rgba(255,255,255,0.4)"/>`,
+};
+
+/** Update the login screen clock every second */
+function updateLoginClock() {
+  const now  = new Date();
+  const h    = String(now.getHours()).padStart(2, '0');
+  const m    = String(now.getMinutes()).padStart(2, '0');
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const mons = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+  const timeEl = document.getElementById('login-time');
+  const dateEl = document.getElementById('login-date');
+  if (timeEl) timeEl.textContent = `${h}:${m}`;
+  if (dateEl) dateEl.textContent = `${days[now.getDay()]}, ${mons[now.getMonth()]} ${now.getDate()}`;
+}
+
+/** Hide boot screen → show login screen */
+function showLoginScreen() {
+  const boot  = document.getElementById('boot-screen');
+  const login = document.getElementById('login-screen');
+
+  boot.classList.add('fade-out');
+  setTimeout(() => {
+    boot.style.display = 'none';
+    login.classList.remove('hidden');
+  }, 650);
+}
+
+/** Called when user clicks a user card */
+function selectUser(user) {
+  if (user === 'guest') {
+    showWelcome('guest', 'Guest');
+    return;
+  }
+  // Show password panel
+  document.getElementById('login-user-select').classList.add('hidden');
+  const pwPanel = document.getElementById('login-password-panel');
+  pwPanel.classList.remove('hidden');
+  setTimeout(() => {
+    const input = document.getElementById('login-password-input');
+    if (input) input.focus();
+  }, 50);
+}
+
+/** Handle Enter key in password field */
+function handlePasswordKey(e) {
+  if (e.key === 'Enter') doLogin();
+}
+
+/** Validate password via DB and proceed — uses Laravel /admin/login */
+function doLogin() {
+  const input  = document.getElementById('login-password-input');
+  const errEl  = document.getElementById('login-error');
+  const btn    = document.getElementById('login-submit-btn');
+  const emailEl = document.getElementById('login-email-input');
+  const val    = input ? input.value.trim() : '';
+
+  if (!val) {
+    errEl.textContent = 'Please enter your password.';
+    errEl.classList.remove('hidden');
+    input.focus();
+    return;
+  }
+
+  // Read email from hidden field injected by Blade, fallback to admin email
+  const emailVal = (emailEl ? emailEl.value : null) || 'admin@amanprojects.com';
+
+  // Read CSRF token from meta tag
+  const csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
+  // Disable button & show loading
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  errEl.classList.add('hidden');
+
+  fetch('/admin/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRF-TOKEN': csrf,
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+    body: new URLSearchParams({ email: emailVal, password: val, _token: csrf }),
+  })
+  .then(res => {
+    // Laravel redirects on success (302) or returns 422/back on failure
+    // If we got a redirect to /admin (success) — proceed
+    if (res.redirected && (res.url.includes('/admin') && !res.url.includes('/login'))) {
+      errEl.classList.add('hidden');
+      showWelcome('aman', 'Aman');
+      return;
+    }
+    // Any 200/redirect back to login = bad credentials
+    if (res.ok || res.status === 302) {
+      // Check if we ended up back at login (failure) or at dashboard (success)
+      if (res.url && !res.url.includes('/login')) {
+        errEl.classList.add('hidden');
+        showWelcome('aman', 'Aman');
+      } else {
+        throw new Error('Invalid credentials');
+      }
+    } else {
+      throw new Error('Invalid credentials');
+    }
+  })
+  .catch(() => {
+    errEl.textContent = 'Incorrect password. Please try again.';
+    errEl.classList.remove('hidden');
+    if (input) { input.value = ''; input.focus(); }
+    // Shake
+    const row = input ? input.closest('.lpanel-password-row') : null;
+    if (row) {
+      row.style.animation = 'none';
+      row.style.transform = 'translateX(-6px)';
+      setTimeout(() => { row.style.transform = 'translateX(6px)'; }, 80);
+      setTimeout(() => { row.style.transform = 'translateX(-4px)'; }, 160);
+      setTimeout(() => { row.style.transform = ''; }, 240);
+    }
+  })
+  .finally(() => {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  });
+}
+
+
+/** Go back to user selection */
+function backToUserSelect() {
+  document.getElementById('login-password-panel').classList.add('hidden');
+  document.getElementById('login-error').classList.add('hidden');
+  document.getElementById('login-password-input').value = '';
+  document.getElementById('login-user-select').classList.remove('hidden');
+}
+
+/** Show welcome animation then enter the correct destination */
+function showWelcome(user, displayName) {
+  // Hide all panels
+  document.getElementById('login-user-select').classList.add('hidden');
+  document.getElementById('login-password-panel').classList.add('hidden');
+
+  const welcome    = document.getElementById('login-welcome');
+  const avatarSvg  = document.getElementById('lwelcome-avatar-svg');
+  const nameEl     = document.getElementById('lwelcome-name');
+
+  avatarSvg.innerHTML = AVATARS[user] || AVATARS.guest;
+  nameEl.textContent  = `Welcome, ${displayName}`;
+  welcome.classList.remove('hidden');
+
+  // Aman (admin) → redirect to Laravel admin route
+  // Guest        → reveal the regular desktop inline
+  setTimeout(() => {
+    if (user === 'aman') {
+      // Fade everything to black then navigate
+      document.body.style.transition = 'opacity 0.6s ease';
+      document.body.style.opacity    = '0';
+      setTimeout(() => { window.location.href = '/admin'; }, 650);
+    } else {
+      enterDesktop();
+    }
+  }, 2200);
+}
+
+/** Fade login screen out, reveal desktop */
+function enterDesktop() {
+  const loginScreen = document.getElementById('login-screen');
+  const desktop     = document.getElementById('desktop');
+
+  loginScreen.classList.add('fade-out');
+  desktop.classList.remove('desktop--hidden');
+  desktop.classList.add('desktop--reveal');
+
+  setTimeout(() => {
+    loginScreen.style.display = 'none';
+  }, 750);
+}
+
+// =========================================================
+//  INIT
+// =========================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ── Admin page: skip index.html-specific init entirely ──
+  // admin.js handles all wiring on admin.html
+  if (document.body.classList.contains('admin-body')) return;
+
+  // ── Boot/Login sequence ───────────────────────────────
+  // Keep desktop invisible until the user logs in
+  const desktop = document.getElementById('desktop');
+  if (desktop) desktop.classList.add('desktop--hidden');
+
+  // Start login clock immediately
+  updateLoginClock();
+  setInterval(updateLoginClock, 10000);
+
+  // After boot animation (~2.4 s) transition to login screen
+  setTimeout(showLoginScreen, 2400);
+
+  // Shake keyframe (injected once programmatically)
+  if (!document.getElementById('login-shake-style')) {
+    const s = document.createElement('style');
+    s.id = 'login-shake-style';
+    s.textContent = `@keyframes loginShake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-8px); }
+      40%      { transform: translateX(8px); }
+      60%      { transform: translateX(-5px); }
+      80%      { transform: translateX(5px); }
+    }`;
+    document.head.appendChild(s);
+  }
+  // ─────────────────────────────────────────────────────
+
+  // Wire up all windows (skip dialogs that aren't real app windows)
+  document.querySelectorAll('.os-window:not([role="dialog"])').forEach(win => {
+    makeDraggable(win);
+    makeResizable(win);
+    // Only wire min/max/close on windows that have all three buttons
+    const btns = win.querySelectorAll('.title-bar-controls button');
+    if (btns.length === 3) wireButtons(win);
+    setupTabs(win);
+  });
+
+  // Show Desktop button
+  setupShowDesktop();
+
+  // Desktop icons
+  setupDesktopIcons();
+
+  // Window click-to-focus
+  setupWindowFocus();
+
+  // Start with About Us window open and active, rest closed
+  const startOpen  = ['win-about'];
+  document.querySelectorAll('.os-window:not([role="dialog"])').forEach(win => {
+    if (!startOpen.includes(win.id)) {
+      win.classList.add('closed');
+    }
+  });
+
+  const firstWin = getWin('win-about');
+  if (firstWin) bringToFront(firstWin);
+
+  updateTaskbarButtons();
+
+  // Close start menu when clicking elsewhere
+  document.addEventListener('click', e => {
+    const menu = document.getElementById('start-menu');
+    const btn  = document.getElementById('start-btn');
+    if (menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
+      closeStartMenu();
+    }
+  });
+
+  // Clock
+  updateClock();
+  setInterval(updateClock, 10000);
+});
+
+// =========================================================
+//  WALLPAPER PICKER
+// =========================================================
+
+const WP_CLASSES = ['wp-aurora','wp-bliss','wp-dusk','wp-night','wp-forest','wp-energy'];
+
+function setWallpaper(wpClass, swatchEl) {
+  // Remove all wallpaper classes
+  WP_CLASSES.forEach(c => document.body.classList.remove(c));
+  // Apply new one
+  document.body.classList.add(wpClass);
+  // Update active swatch
+  document.querySelectorAll('.wp-swatch').forEach(s => s.classList.remove('active'));
+  if (swatchEl) swatchEl.classList.add('active');
+  // Persist
+  try { localStorage.setItem('amanos-wallpaper', wpClass); } catch(_) {}
+}
+
+function openWallpaperPicker() {
+  closeCtxMenu();
+  document.getElementById('wp-picker').classList.toggle('open');
+}
+
+function loadSavedWallpaper() {
+  try {
+    const saved = localStorage.getItem('amanos-wallpaper');
+    if (saved && WP_CLASSES.includes(saved)) {
+      const swatch = document.querySelector(`.wp-swatch[data-wp="${saved}"]`);
+      setWallpaper(saved, swatch);
+    } else {
+      // default
+      document.body.classList.add('wp-aurora');
+    }
+  } catch(_) {
+    document.body.classList.add('wp-aurora');
+  }
+}
+
+// =========================================================
+//  DESKTOP RIGHT-CLICK CONTEXT MENU
+// =========================================================
+
+const ctxMenu = document.getElementById('ctx-menu');
+
+function openCtxMenu(x, y) {
+  if (!ctxMenu) return;
+  ctxMenu.style.left = Math.min(x, window.innerWidth  - 200) + 'px';
+  ctxMenu.style.top  = Math.min(y, window.innerHeight - 150) + 'px';
+  ctxMenu.classList.add('open');
+}
+
+function closeCtxMenu() {
+  if (ctxMenu) ctxMenu.classList.remove('open');
+}
+
+function sortDesktopIcons() {
+  closeCtxMenu();
+  // Visual feedback only — icons are in fixed order
+  const area = document.querySelector('.desktop-icons-area');
+  if (!area) return;
+  area.style.transition = 'opacity 0.2s';
+  area.style.opacity = '0.5';
+  setTimeout(() => { area.style.opacity = '1'; }, 300);
+}
+
+function refreshDesktop() {
+  closeCtxMenu();
+  // Brief flash effect
+  document.body.style.transition = 'filter 0.15s';
+  document.body.style.filter = 'brightness(0.7)';
+  setTimeout(() => { document.body.style.filter = ''; }, 150);
+}
+
+// Wire context menu on desktop (not on windows/taskbar)
+document.getElementById('desktop')?.addEventListener('contextmenu', e => {
+  // Don't intercept if right-clicking inside a window
+  if (e.target.closest('.os-window')) return;
+  e.preventDefault();
+  closeStartMenu();
+  document.getElementById('wp-picker')?.classList.remove('open');
+  openCtxMenu(e.clientX, e.clientY);
+});
+
+// Close context menu & picker on any click
+document.addEventListener('click', e => {
+  if (ctxMenu && !ctxMenu.contains(e.target)) closeCtxMenu();
+  const picker = document.getElementById('wp-picker');
+  const btn = document.querySelector('.ctx-item[onclick*="openWallpaperPicker"]');
+  if (picker && !picker.contains(e.target) && !(btn && btn.contains(e.target))) {
+    picker.classList.remove('open');
+  }
+});
+
+// Load saved wallpaper on startup
+loadSavedWallpaper();

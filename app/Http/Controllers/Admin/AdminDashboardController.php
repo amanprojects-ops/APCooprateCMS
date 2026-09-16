@@ -5,29 +5,47 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\BlogPost;
 use App\Models\ContactInquiry;
-use App\Models\Project;
-use App\Models\Service;
-use App\Models\Testimonial;
 use App\Models\Product;
+use App\Models\Service;
+use App\Models\Setting;
+use App\Models\User;
 
 class AdminDashboardController extends Controller
 {
     public function index()
     {
-        $stats = [
-            'services'          => Service::count(),
-            'products'          => Product::count(),
-            'projects'          => Project::count(),
-            'blog_posts'        => BlogPost::count(),
-            'testimonials'      => Testimonial::count(),
-            'new_inquiries'     => ContactInquiry::where('status', 'new')->count(),
-            'published_posts'   => BlogPost::where('is_published', true)->count(),
-            'active_services'   => Service::where('is_active', true)->count(),
-        ];
+        $usersCount = User::count();
+        $messagesCount = ContactInquiry::count();
+        $productsCount = Product::count();
+        $servicesCount = Service::count();
+        $blogPostsCount = BlogPost::count();
 
-        $recent_inquiries = ContactInquiry::latest()->take(5)->get();
-        $recent_posts     = BlogPost::latest()->take(5)->get();
+        $users = User::latest()->get();
+        $contactInquiries = ContactInquiry::latest()->get();
+        $settings = Setting::allKeyed();
 
-        return view('admin.dashboard', compact('stats', 'recent_inquiries', 'recent_posts'));
+        $dbMessages = $contactInquiries->map(function ($i) {
+            return [
+                'id' => $i->id,
+                'from' => $i->name,
+                'email' => $i->email,
+                'subject' => $i->subject ?? 'Inquiry',
+                'time' => $i->created_at->format('H:i'),
+                'body' => $i->message,
+                'read' => $i->status !== 'new',
+            ];
+        })->values()->all();
+
+        return view('admin.dashboard', compact(
+            'usersCount',
+            'messagesCount',
+            'productsCount',
+            'servicesCount',
+            'blogPostsCount',
+            'users',
+            'contactInquiries',
+            'dbMessages',
+            'settings'
+        ));
     }
 }
